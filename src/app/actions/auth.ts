@@ -10,10 +10,14 @@ export const updateUsername = actionClient
       username: zfd.text(),
     })
   )
-  .stateAction(async ({ parsedInput: { username } }) => {
+  .stateAction(({ parsedInput: { username } }) => {
     return serverSupabase().auth.updateUser({
       data: {
         username,
       },
     })
   })
+
+export const logout = actionClient.stateAction(() => {
+  return serverSupabase().auth.signOut()
+})

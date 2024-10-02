@@ -1,10 +1,9 @@
 'use client'
 
-import { updateUsername } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { UpdateUsernameForm } from '@/components/UpdateUsernameForm'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useStateAction } from 'next-safe-action/stateful-hooks'
 import { useRef, useState } from 'react'
 
 interface UserControlClientProps {
@@ -14,14 +13,11 @@ interface UserControlClientProps {
 export function UserControlClient({ username }: UserControlClientProps) {
   const btnMotionRef = useRef<HTMLInputElement>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const { execute } = useStateAction(updateUsername, {
-    onSuccess: () => {
-      setIsEditing(false)
-    },
-  })
 
   return (
-    <form action={execute} className="relative">
+    <UpdateUsernameForm
+      actionOptions={{ onSuccess: () => setIsEditing(false) }}
+    >
       <AnimatePresence initial={false} mode="wait">
         {isEditing ? (
           <motion.div
@@ -54,6 +50,6 @@ export function UserControlClient({ username }: UserControlClientProps) {
           </motion.div>
         )}
       </AnimatePresence>
-    </form>
+    </UpdateUsernameForm>
   )
 }

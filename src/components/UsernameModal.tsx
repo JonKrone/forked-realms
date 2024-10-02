@@ -1,4 +1,5 @@
-import { updateUsername } from '@/app/actions/auth'
+'use server'
+
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -8,8 +9,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { UpdateUsernameForm } from '@/components/UpdateUsernameForm'
 import { serverSupabase } from '@/lib/supabase/server'
-import { useStateAction } from 'next-safe-action/stateful-hooks'
 
 export const UsernameModal = async () => {
   const {
@@ -18,9 +19,6 @@ export const UsernameModal = async () => {
   if (user?.user_metadata.username) {
     return null
   }
-  console.log('user', user)
-
-  const { execute } = useStateAction(updateUsername)
 
   return (
     <div className="min-h-screen w-full top-0 absolute flex items-center justify-center">
@@ -30,7 +28,7 @@ export const UsernameModal = async () => {
             Welcome to the Story
           </CardTitle>
         </CardHeader>
-        <form action={execute}>
+        <UpdateUsernameForm>
           <CardContent>
             <div className="grid w-full items-center gap-4">
               <div className="flex flex-col space-y-1.5">
@@ -50,7 +48,7 @@ export const UsernameModal = async () => {
               Enter the Story
             </Button>
           </CardFooter>
-        </form>
+        </UpdateUsernameForm>
       </Card>
     </div>
   )
