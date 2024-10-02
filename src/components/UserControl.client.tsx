@@ -4,33 +4,29 @@ import { updateUsername } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useActionState, useState } from 'react'
+import { useStateAction } from 'next-safe-action/stateful-hooks'
+import { useRef, useState } from 'react'
 
 interface UserControlClientProps {
   username: string | undefined
-  handleSubmit: (formData: FormData) => Promise<void>
 }
 
-export function UserControlClient({
-  username,
-  handleSubmit,
-}: UserControlClientProps) {
+export function UserControlClient({ username }: UserControlClientProps) {
+  const btnMotionRef = useRef<HTMLInputElement>(null)
   const [isEditing, setIsEditing] = useState(false)
-
-  const [error, action] = useActionState(async (_prev: any, form: FormData) => {
-    const { error } = await updateUsername(form)
-    if (error) {
-      return error
-    }
-  }, null)
+  const { execute } = useStateAction(updateUsername, {
+    onSuccess: () => {
+      setIsEditing(false)
+    },
+  })
 
   return (
-    <form action={action} className="relative">
+    <form action={execute} className="relative">
       <AnimatePresence initial={false} mode="wait">
         {isEditing ? (
           <motion.div
             key="input"
-            initial={{ opacity: 0, width: 0 }}
+            initial={{ opacity: 0, width: btnMotionRef.current?.offsetWidth }}
             animate={{ opacity: 1, width: 'auto' }}
             exit={{ opacity: 0, width: 0 }}
             transition={{ duration: 0.2 }}
@@ -46,9 +42,10 @@ export function UserControlClient({
         ) : (
           <motion.div
             key="button"
+            ref={btnMotionRef}
             initial={{ opacity: 0, width: 0 }}
             animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
+            exit={{ opacity: 0, width: 'auto' }}
             transition={{ duration: 0.2 }}
           >
             <Button variant="outline" onMouseEnter={() => setIsEditing(true)}>

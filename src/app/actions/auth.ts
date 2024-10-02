@@ -1,14 +1,19 @@
+'use server'
+
+import { actionClient } from '@/lib/safe-action'
 import { serverSupabase } from '@/lib/supabase/server'
+import { zfd } from 'zod-form-data'
 
-export async function updateUsername(formData: FormData) {
-  const supabase = serverSupabase()
-  const username = formData.get('username')
-
-  const { data, error } = await supabase.auth.updateUser({
-    data: {
-      username,
-    },
+export const updateUsername = actionClient
+  .schema(
+    zfd.formData({
+      username: zfd.text(),
+    })
+  )
+  .stateAction(async ({ parsedInput: { username } }) => {
+    return serverSupabase().auth.updateUser({
+      data: {
+        username,
+      },
+    })
   })
-
-  return { data, error }
-}
