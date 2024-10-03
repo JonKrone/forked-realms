@@ -36,14 +36,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // const nextPath = request.nextUrl.pathname
-  // if (!user && !nextPath.startsWith('/auth')) {
-  //   // no user, potentially respond by redirect the user to the login page
-  //   const url = request.nextUrl.clone()
-  //   url.pathname = '/login'
-  //   return NextResponse.redirect(url)
-  // }
-
   // Users are automatically signed in anonymously
   if (!user) {
     await supabase.auth.signInAnonymously()

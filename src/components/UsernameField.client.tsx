@@ -6,11 +6,11 @@ import { UpdateUsernameForm } from '@/components/UpdateUsernameForm'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRef, useState } from 'react'
 
-interface UserControlClientProps {
+interface UsernameFieldProps {
   username: string | undefined
 }
 
-export function UserControlClient({ username }: UserControlClientProps) {
+export function UsernameField({ username }: UsernameFieldProps) {
   const btnMotionRef = useRef<HTMLInputElement>(null)
   const [isEditing, setIsEditing] = useState(false)
 
@@ -22,15 +22,15 @@ export function UserControlClient({ username }: UserControlClientProps) {
         {isEditing ? (
           <motion.div
             key="input"
-            initial={{ opacity: 0, width: btnMotionRef.current?.offsetWidth }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
+            initial={{ width: btnMotionRef.current?.offsetWidth }}
+            animate={{ width: 'auto' }}
+            exit={{ width: 0 }}
             transition={{ duration: 0.2 }}
           >
             <Input
               defaultValue={username}
               name="username"
-              className="pr-20"
+              className="pr-20 bg-white"
               autoFocus
               onBlur={() => setIsEditing(false)}
             />
@@ -39,9 +39,9 @@ export function UserControlClient({ username }: UserControlClientProps) {
           <motion.div
             key="button"
             ref={btnMotionRef}
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 'auto' }}
+            initial={{ width: 0 }}
+            animate={{ width: 'auto' }}
+            exit={{ width: 'auto' }}
             transition={{ duration: 0.2 }}
           >
             <Button variant="outline" onMouseEnter={() => setIsEditing(true)}>

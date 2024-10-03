@@ -1,4 +1,4 @@
-import { UserControl } from '@/components/UserControl'
+import { Navbar } from '@/components/Navbar'
 import { UsernameModal } from '@/components/UsernameModal'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
@@ -33,7 +33,7 @@ export default function RootLayout({
       >
         {children}
         <UsernameModal />
-        <UserControl />
+        <Navbar />
       </body>
     </html>
   )

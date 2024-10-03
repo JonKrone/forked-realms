@@ -1,12 +1,12 @@
 'use server'
 
 import { LogoutButton } from '@/components/LogoutButton.client'
-import { UserControlClient } from '@/components/UserControl.client'
+import { UsernameField } from '@/components/UsernameField.client'
 import { serverSupabase } from '@/lib/supabase/server'
 
-interface UserControlProps {}
+interface NavbarProps {}
 
-export async function UserControl({}: UserControlProps) {
+export async function Navbar({}: NavbarProps) {
   const {
     data: { user },
   } = await serverSupabase().auth.getUser()
@@ -15,7 +15,7 @@ export async function UserControl({}: UserControlProps) {
 
   return (
     <div className="fixed top-4 right-4 flex items-center space-x-2">
-      <UserControlClient username={username} />
+      <UsernameField username={username} />
       <LogoutButton />
     </div>
   )

@@ -12,7 +12,7 @@ export function LogoutButton() {
 
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="icon"
       aria-label="Logout"
       onClick={() => execute()}
