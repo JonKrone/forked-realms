@@ -1,20 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set')
+if (!process.env.SUPABASE_URL) {
+  throw new Error('SUPABASE_URL is not set')
 }
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not set')
+if (!process.env.SUPABASE_API_KEY) {
+  throw new Error('SUPABASE_API_KEY is not set')
 }
 
 export const serverSupabase = () => {
   const cookieStore = cookies()
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_API_KEY!,
     {
       cookies: {
         getAll() {
