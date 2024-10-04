@@ -110,7 +110,6 @@ export default function StoryFlow() {
     for await (const delta of readStreamableValue(result.data.stream)) {
       if (delta === '') continue // empty string is the first value fed to the stream
 
-      fitView({ padding: 5, duration: 1000 })
       try {
         const parsedDelta = JSON.parse(delta || '') as {
           nextPartOfTheStory: string
@@ -158,6 +157,7 @@ export default function StoryFlow() {
         console.error('Error parsing story continuations', e)
       }
     }
+    fitView({ padding: 5, duration: 1000, minZoom: 1, nodes: steps })
   }, [])
 
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
@@ -176,7 +176,7 @@ export default function StoryFlow() {
         onNodeClick={handleNewNodeSubmit}
         panOnScroll
         zoomOnPinch
-        maxZoom={10}
+        minZoom={0.1}
       />
       <Background
         gap={48}
@@ -184,14 +184,16 @@ export default function StoryFlow() {
         color="#475569"
         style={{ backgroundColor: '#0f172a' }}
       />
-      <div
-        className="absolute top-0 left-0 w-full h-full z-[-1] opacity-30"
-        style={{
-          backgroundImage: 'url(/bg2.webp)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      />
+      {/* Fun little 3d background experiment */}
+      <div className="fixed inset-0 overflow-hidden perspective-[1000px] z-[-1]">
+        <div
+          className="absolute top-1/2 left-1/2 w-full h-full z-[-1] opacity-30 bg-cover bg-center min-w-[200%] min-h-[200%] preserve-3d"
+          style={{
+            backgroundImage: 'url(/bg2.webp)',
+            animation: 'rotateBackground 120s linear infinite alternate',
+          }}
+        />
+      </div>
     </>
   )
 }

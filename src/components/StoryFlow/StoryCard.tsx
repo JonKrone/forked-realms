@@ -30,9 +30,9 @@ export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
       className={cn(
         'bg-transparent border-none shadow-xl shadow-slate-700 overflow-hidden transition-colors duration-200',
         leaf &&
-          'border-2 border-dashed border-gray-500 hover:bg-slate-600 hover:bg-opacity-80 hover:border-gray-500 hover:cursor-pointer active:bg-slate-500'
+          'border-2 border-dashed border-gray-500 hover:bg-slate-600 hover:bg-opacity-80 hover:border-gray-500 hover:cursor-pointer active:bg-slate-500 hover:shadow-[0_0_15px_rgba(100,149,237,0.5)] transition-all duration-300'
       )}
-      style={{ width: '28rem' }}
+      style={{ width: '32rem' }}
     >
       <div className="relative grid grid-cols-2">
         <div>
@@ -54,7 +54,7 @@ export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
             )}
             <div
               className={cn(
-                'font-semibold text-lg leading-tight p-4',
+                'font-semibold text-lg leading-tight p-5',
                 root && 'text-center'
               )}
             >
@@ -74,9 +74,11 @@ export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
             <Image
               src={imageUrl}
               alt={imagePrompt || label}
-              layout="fill"
-              objectFit="cover"
+              fill
               className="rounded-r-lg"
+              style={{
+                objectFit: 'cover',
+              }}
             />
           </div>
         )}
@@ -84,3 +86,5 @@ export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
     </Card>
   )
 })
+
+// 1274

@@ -10,31 +10,50 @@ import { z } from 'zod'
 export const generateContinuations = actionClient
   .schema(z.object({ storySteps: z.string() }))
   .action(async ({ parsedInput: { storySteps } }) => {
-    const stream = createStreamableValue('')
+    const stream = createStreamableValue<string>('')
 
     ;(async () => {
-      const result = await _generateContinuations(storySteps)
+      try {
+        const result = await _generateContinuations(storySteps)
 
-      let imagesRequested = 0
-      let imagesGenerated = 0
-      for await (const partOfTheStory of result.elementStream) {
-        stream.update(JSON.stringify(partOfTheStory))
-        ;(async () => {
+        let imagesRequested = 0
+        let imagesGenerated = 0
+        let doneWithContinuations = false
+
+        for await (const partOfTheStory of result.elementStream) {
+          stream.update(JSON.stringify(partOfTheStory))
           imagesRequested += 1
-          const imageUrl = await _generateImage(partOfTheStory.imagePrompt)
-          stream.update(
-            JSON.stringify({
-              nextPartOfTheStory: partOfTheStory.nextPartOfTheStory,
-              imagePrompt: partOfTheStory.imagePrompt,
-              imageUrl: imageUrl,
-            })
-          )
+          ;(async () => {
+            try {
+              const imageUrl = await _generateImage(partOfTheStory.imagePrompt)
+              stream.update(
+                JSON.stringify({
+                  nextPartOfTheStory: partOfTheStory.nextPartOfTheStory,
+                  imagePrompt: partOfTheStory.imagePrompt,
+                  imageUrl: imageUrl,
+                })
+              )
 
-          imagesGenerated += 1
-          if (imagesGenerated === imagesRequested) {
-            stream.done()
-          }
-        })()
+              imagesGenerated += 1
+              if (
+                doneWithContinuations &&
+                imagesGenerated === imagesRequested
+              ) {
+                stream.done()
+              }
+            } catch (error) {
+              // Handle image generation error by closing the stream
+              console.error('Error generating image', error)
+              stream.done()
+            }
+          })()
+        }
+
+        doneWithContinuations = true
+      } catch (error) {
+        // Handle continuation generation error by closing the stream
+        console.error('Error generating continuations', error)
+        stream.done()
       }
     })()
 
@@ -55,7 +74,7 @@ async function _generateContinuations(storySteps: string) {
 
 1. **Review Story Steps**: Thoroughly review the provided series of story steps to understand the plot, characters, and setting.
 2. **Identify Key Elements**: Note any particularly funny or relevant elements in previous segments that can be incorporated into the new continuations.
-3. **Generate Continuations**: Create 3 potential continuations of the story, ensuring they are creative and unique.
+3. **Generate Continuations**: Create 3 potential continuations of the story, ensuring they are creative and unique. Stick to 2 sentences or less.
 4. **Generate Image Prompt**: Create a prompt for an image that would fit the next part of the story. Ensure it is a high quality image that would be suitable for a storybook. To improve image consistency, include a description of any main characters or objects from the story in the prompt.
 5. **Maintain Tone**: Ensure that the continuations are quirky and intuitive, consistent with the intended vibe for the target audience.
 
