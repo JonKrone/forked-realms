@@ -38,28 +38,13 @@ Component Breakdown and Task List
      - username: text, unique
      - created_at: timestamp
 
-3. User Authentication and Profile Management
-   Task 3.2: Handle New User Sign-In
-
-   - On form submission:
-     - Use Supabase client to sign in anonymously.
-     - Store the session data securely.
-     - Insert the username into the profiles table with the user's ID.
-     - Validate username uniqueness and handle errors.
-
-   Task 3.3: Handle Returning Users
-
-   - Check for an existing Supabase session on app load.
-   - If the user is already signed in, fetch and display their username.
-   - Skip the username entry card and redirect to the story root.
-
-4. Design and Implement Background
+3. Design and Implement Background
    Task 4.1: Create Starry Background
 
    - Use Tailwind CSS and custom CSS to design a dark, starry background.
    - Implement animations for a pearlescent miasma effect using CSS animations or Canvas.
 
-5. Story Root Page
+4. Story Root Page
    Task 5.1: Display Initial Story Text
 
    - Create a server component that renders "And thus, the universe was created."
@@ -76,7 +61,7 @@ Component Breakdown and Task List
    - Provide a text input below the options for users to enter their own continuation.
    - Include validation to prevent empty submissions.
 
-6. Story Continuation Logic
+5. Story Continuation Logic
    Task 6.1: Create Story Nodes and Options in Database
 
    - Define stories table with fields:
@@ -104,7 +89,7 @@ Component Breakdown and Task List
      - Set parent_id to the current story node's ID.
      - Associate the new node with the user.
 
-7. OpenAI Integration
+6. OpenAI Integration
    Task 7.1: Set Up OpenAI API Client
 
    - Install OpenAI Node.js library.
@@ -134,7 +119,7 @@ Component Breakdown and Task List
    - Insert AI-generated options into the options table associated with the current story node.
    - Display these options to the user.
 
-8. React Query Integration
+7. React Query Integration
    Task 8.1: Configure React Query Client
 
    - Set up React Query provider in the application root.
@@ -149,7 +134,7 @@ Component Breakdown and Task List
    - When users submit continuations or select options, optimistically update the UI.
    - Rollback changes if mutations fail.
 
-9. Server Components and Data Fetching
+8. Server Components and Data Fetching
    Task 9.1: Identify Server Components
 
    - Components that render story content and options can be server components.
@@ -159,18 +144,18 @@ Component Breakdown and Task List
    - In server components, fetch data directly from Supabase using server-side code.
    - Pass data to client components as props.
 
-10. Routing and Navigation
-    Task 10.1: Implement Dynamic Routing with App Router
+9. Routing and Navigation
+   Task 10.1: Implement Dynamic Routing with App Router
 
-    - Use Next.js dynamic routes for story nodes (e.g., /story/[id]).
-    - On navigation, fetch and display the story node corresponding to the id.
+   - Use Next.js dynamic routes for story nodes (e.g., /story/[id]).
+   - On navigation, fetch and display the story node corresponding to the id.
 
-    Task 10.2: Update Navigation Logic
+   Task 10.2: Update Navigation Logic
 
-    - When users select an option or submit a continuation, navigate to the new story node's route.
-    - Use Next.js useRouter for client-side navigation.
+   - When users select an option or submit a continuation, navigate to the new story node's route.
+   - Use Next.js useRouter for client-side navigation.
 
-11. UI Enhancements
+10. UI Enhancements
     Task 11.1: Visual Connections Between Options
 
     - Use SVG or Canvas to draw lines connecting the current story text to the options.
@@ -186,7 +171,7 @@ Component Breakdown and Task List
     - Add subtle animations for transitions between story nodes.
     - Use Tailwind CSS utility classes for animations.
 
-12. Error Handling and Validation
+11. Error Handling and Validation
     Task 12.1: Handle API Errors
 
     - Implement try-catch blocks around API calls.
@@ -201,7 +186,7 @@ Component Breakdown and Task List
 
     - Implement basic rate limiting to prevent abuse of the OpenAI API.
 
-13. Security Considerations
+12. Security Considerations
     Task 13.1: Secure API Keys
 
     - Store OpenAI and Supabase keys in environment variables.

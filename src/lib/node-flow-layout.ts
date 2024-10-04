@@ -1,23 +1,26 @@
+'use client'
+
 import { StoryCardNode } from '@/components/StoryFlow/StoryCard'
 import { Edge, Node, Position } from '@xyflow/react'
 import dagre from 'dagre'
 
-const nodeWidth = 375
-const nodeHeight = 187
-
-const dagreGraph = new dagre.graphlib.Graph()
-dagreGraph.setDefaultEdgeLabel(() => ({}))
+const nodeWidth = 440
+const nodeHeight = 220
 
 export function getLayoutedElements(
   nodes: StoryCardNode[],
   edges: Edge[],
-  direction: 'top-to-bottom' | 'left-to-right' = 'top-to-bottom'
+  direction: 'TB' | 'LR' = 'TB'
 ) {
-  const isHorizontal = direction === 'left-to-right'
-  dagreGraph.setGraph({ rankdir: direction })
+  const dagreGraph = new dagre.graphlib.Graph()
+  dagreGraph.setDefaultEdgeLabel(() => ({}))
+
+  const isHorizontal = direction === 'LR'
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 90, ranksep: 40 })
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight })
+    const { height } = getNodeDimensions(node)
+    dagreGraph.setNode(node.id, { width: nodeWidth, height })
   })
 
   edges.forEach((edge) => {
@@ -28,6 +31,7 @@ export function getLayoutedElements(
 
   const newNodes = nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id)
+
     return {
       ...node,
       targetPosition: isHorizontal ? Position.Left : Position.Top,
@@ -40,4 +44,17 @@ export function getLayoutedElements(
   })
 
   return { nodes: newNodes, edges }
+}
+
+const getNodeDimensions = (node: StoryCardNode) => {
+  if (typeof document === 'undefined') {
+    return { width: nodeWidth, height: nodeHeight }
+  }
+
+  const domEl = document.querySelector(`[data-id="${node.id}"]`) as HTMLElement
+  if (!domEl) {
+    return { width: nodeWidth, height: nodeHeight }
+  }
+
+  return { width: domEl.clientWidth, height: domEl.clientHeight }
 }
