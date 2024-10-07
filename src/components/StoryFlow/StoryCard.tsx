@@ -1,9 +1,8 @@
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { Handle, NodeProps, Position } from '@xyflow/react'
-import Image from 'next/image'
-import { FC, memo } from 'react'
 
+import { SmartImage } from '@/components/StoryFlow/SmartImage'
 import { Node } from '@xyflow/react'
 
 export type StoryCardData = {
@@ -17,13 +16,13 @@ export type StoryCardData = {
 
 export type StoryCardNode = Node<StoryCardData>
 
-export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
-  const { root, leaf, label, imagePrompt, imageUrl } = data
+const handleStyle = {
+  border: 'none',
+  backgroundColor: 'rgb(71 85 105)',
+}
 
-  const handleStyle = {
-    border: 'none',
-    backgroundColor: 'rgb(71 85 105)',
-  }
+export const StoryCard = ({ data }: NodeProps<StoryCardNode>) => {
+  const { root, leaf, label, imagePrompt, imageUrl } = data
 
   return (
     <Card
@@ -34,7 +33,10 @@ export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
       )}
       style={{ width: '32rem' }}
     >
-      <div className="relative grid grid-cols-2">
+      <div className="relative grid grid-cols-2 min-h-56">
+        {!root && (
+          <Handle type="target" position={Position.Top} style={handleStyle} />
+        )}
         <div>
           <div className="absolute inset-0 bg-blue-500 opacity-20 blur-xl rounded-lg" />
           <div
@@ -45,13 +47,6 @@ export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
                 : 'bg-slate-800 border border-slate-700'
             )}
           >
-            {!root && (
-              <Handle
-                type="target"
-                position={Position.Top}
-                style={handleStyle}
-              />
-            )}
             <div
               className={cn(
                 'font-semibold text-lg leading-tight p-5',
@@ -60,31 +55,21 @@ export const StoryCard: FC<NodeProps<StoryCardNode>> = memo(({ data }) => {
             >
               {label}
             </div>
-            {!leaf && (
-              <Handle
-                type="source"
-                position={Position.Bottom}
-                style={handleStyle}
-              />
-            )}
           </div>
         </div>
-        {imageUrl && (
-          <div className="relative h-full">
-            <Image
-              src={imageUrl}
-              alt={imagePrompt || label}
-              fill
-              className="rounded-r-lg"
-              style={{
-                objectFit: 'cover',
-              }}
-            />
-          </div>
+        <SmartImage
+          imageUrl={imageUrl}
+          imagePrompt={imagePrompt}
+          label={label}
+        />
+        {!leaf && (
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            style={handleStyle}
+          />
         )}
       </div>
     </Card>
   )
-})
-
-// 1274
+}

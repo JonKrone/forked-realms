@@ -5,7 +5,7 @@ import { Edge, Node, Position } from '@xyflow/react'
 import dagre from 'dagre'
 
 const nodeWidth = 440
-const nodeHeight = 220
+const nodeHeight = 224
 
 export function getLayoutedElements(
   nodes: StoryCardNode[],
@@ -16,7 +16,7 @@ export function getLayoutedElements(
   dagreGraph.setDefaultEdgeLabel(() => ({}))
 
   const isHorizontal = direction === 'LR'
-  dagreGraph.setGraph({ rankdir: direction, nodesep: 90, ranksep: 40 })
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 100, ranksep: 100 })
 
   nodes.forEach((node) => {
     const { height } = getNodeDimensions(node)

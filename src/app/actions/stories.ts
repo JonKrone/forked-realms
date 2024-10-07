@@ -117,7 +117,7 @@ async function _generateImage(prompt: string) {
   const [imageUrl] = (await replicate.run(imageModels.blackForestLabs.schnell, {
     input: {
       prompt,
-      aspect_ratio: '3:4', // 2:3, 3:4, 9:21?
+      aspect_ratio: '1:1', // 3:4, 2:3, 3:4, 9:21?
     },
   })) as string[]
 

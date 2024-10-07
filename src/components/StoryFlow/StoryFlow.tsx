@@ -24,7 +24,7 @@ const StartingStories = [
   'A single door appears in the middle of the forest, pulsing with a faint glow.',
   "Every painting you touch comes alive, and they're all trying to tell you something urgent.",
   "You wake up to discover that gravity has reversed, and you're floating toward the sky.",
-  'An ancient tree in the park starts whispering your name whenever you walk by.',
+  /** a fun one **/ 'An ancient tree in the park starts whispering your name whenever you walk by.',
   'A stray cat crosses your path, but when you look into its eyes, you see entire galaxies swirling within.',
   "Time freezes except for you and a stranger who says, 'I've been looking for you across lifetimes.'",
 ]
@@ -87,16 +87,42 @@ export default function StoryFlow() {
       throw new Error('No leaf node found') // shouldn't happen
     }
     // mark the leaf node as a part of a story.
+    // and generate 3 new template nodes for the story
+    const newNodes = [
+      createNode({
+        label: '',
+        ephemeral: true,
+        root: false,
+        leaf: true,
+      }),
+      createNode({
+        label: '',
+        ephemeral: true,
+        root: false,
+        leaf: true,
+      }),
+      createNode({
+        label: '',
+        ephemeral: true,
+        root: false,
+        leaf: true,
+      }),
+    ]
+    const newEdges = newNodes.map((n, i) => ({
+      id: `${leafNode.id}-${n.id}`,
+      source: leafNode.id,
+      target: n.id,
+    }))
+
     setState((state) => {
       const thisLeaf = state.nodes.find((n) => n.id === leafNode.id)
       if (!thisLeaf) return state
-
       thisLeaf.data.ephemeral = false
       thisLeaf.data.leaf = false
 
       return {
-        ...state,
-        nodes: state.nodes,
+        nodes: [...state.nodes, ...newNodes],
+        edges: [...state.edges, ...newEdges],
       }
     })
 
@@ -108,7 +134,7 @@ export default function StoryFlow() {
 
     // listen for streamed continuations and images
     for await (const delta of readStreamableValue(result.data.stream)) {
-      if (delta === '') continue // empty string is the first value fed to the stream
+      if (!delta) continue // empty string is the first value fed to the stream
 
       try {
         const parsedDelta = JSON.parse(delta || '') as {
@@ -118,38 +144,35 @@ export default function StoryFlow() {
         }
 
         setState((state) => {
-          // If the new data contains an imageUrl, update the node with the imageUrl
+          // If the new data contains an imageUrl, update the existing node with the imageUrl
           if (parsedDelta.imageUrl) {
-            const existingNode = state.nodes.find(
+            const nodeToChange = state.nodes.find(
               (n) => n.data.label === parsedDelta.nextPartOfTheStory
             )
-            if (existingNode) {
-              existingNode.data.imageUrl = parsedDelta.imageUrl
-              existingNode.data.imagePrompt = parsedDelta.imagePrompt
+            if (nodeToChange) {
+              nodeToChange.data.imageUrl = parsedDelta.imageUrl
+              nodeToChange.data.imagePrompt = parsedDelta.imagePrompt
             }
+
             return {
               ...state,
               nodes: [...state.nodes],
             }
           } else {
-            const newNode = createNode({
-              label: parsedDelta.nextPartOfTheStory,
-              ephemeral: true,
-              root: false,
-              leaf: true,
-            })
+            // StrictMode invokes setState callbacks twice, so the node we're editing is either empty
+            // or already has this story step.
+            const nodeToChange = newNodes.find(
+              (n) =>
+                n.data.label === parsedDelta.nextPartOfTheStory ||
+                n.data.label === ''
+            )
+            if (nodeToChange) {
+              nodeToChange.data.label = parsedDelta.nextPartOfTheStory
+            }
 
             return {
               ...state,
-              nodes: [...state.nodes, newNode],
-              edges: [
-                ...state.edges,
-                {
-                  id: `${leafNode.id}-${newNode.id}`,
-                  source: leafNode.id,
-                  target: newNode.id,
-                },
-              ],
+              nodes: [...state.nodes],
             }
           }
         })
@@ -157,7 +180,6 @@ export default function StoryFlow() {
         console.error('Error parsing story continuations', e)
       }
     }
-    fitView({ padding: 5, duration: 1000, minZoom: 1, nodes: steps })
   }, [])
 
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
@@ -170,13 +192,16 @@ export default function StoryFlow() {
       <ReactFlow
         nodes={layoutedNodes as StoryCardNode[]}
         edges={layoutedEdges}
-        fitView
+        // fitView
         proOptions={{ hideAttribution: true }}
         nodeTypes={NodeTypes}
         onNodeClick={handleNewNodeSubmit}
         panOnScroll
         zoomOnPinch
         minZoom={0.1}
+        onInit={(reactFlowInstance) => {
+          reactFlowInstance.fitView({ duration: 0 })
+        }}
       />
       <Background
         gap={48}
@@ -190,7 +215,7 @@ export default function StoryFlow() {
           className="absolute top-1/2 left-1/2 w-full h-full z-[-1] opacity-30 bg-cover bg-center min-w-[200%] min-h-[200%] preserve-3d"
           style={{
             backgroundImage: 'url(/bg2.webp)',
-            animation: 'rotateBackground 120s linear infinite alternate',
+            animation: 'rotateBackground 80s linear infinite alternate',
           }}
         />
       </div>
@@ -258,5 +283,3 @@ function createNode({
     position: { x: 0, y: 0 },
   }
 }
-
-// Background spacey landscape image, dark and faintly starry, like we're floating in a pearlescent miasma of gas and dust. Subdued, minimalistic, slightly grainy.
