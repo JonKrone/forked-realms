@@ -55,6 +55,7 @@ export const StoryCard = ({ data }: NodeProps<StoryCardNode>) => {
             >
               {label}
             </div>
+            {/* <Skeleton /> */}
           </div>
         </div>
         <SmartImage

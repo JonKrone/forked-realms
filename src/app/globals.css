@@ -77,6 +77,9 @@ body {
   }
 }
 
+/**
+ * Background animation
+ */
 @keyframes rotateBackground {
   from {
     transform: translate(-50%, -50%) rotateX(25deg) rotateY(-5deg) rotateZ(0deg);
@@ -87,11 +90,45 @@ body {
   }
 }
 
+/**
+ * Image loading animation
+ */
 @keyframes gradientWave {
   0% {
     background-position: 0% 0%;
   }
   100% {
     background-position: 0% 100%;
+  }
+}
+
+/**
+ * <Collapsible />
+ */
+.CollapsibleContent {
+  overflow: hidden;
+}
+.CollapsibleContent[data-state='open'] {
+  animation: collapseDown 300ms ease-out;
+}
+.CollapsibleContent[data-state='closed'] {
+  animation: collapseUp 300ms ease-out;
+}
+
+@keyframes collapseDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes collapseUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
   }
 }
