@@ -1,5 +1,5 @@
 import { Navbar } from '@/components/Navbar'
-import { UsernameModal } from '@/components/UsernameModal'
+import { OnboardingDialogGuard } from '@/components/OnboardingDialogGuard'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
@@ -32,7 +32,7 @@ export default function RootLayout({
         className={`box-border ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <UsernameModal />
+        <OnboardingDialogGuard />
         <Navbar />
       </body>
     </html>

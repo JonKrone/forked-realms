@@ -24,6 +24,7 @@ export const SmartImage: FC<SmartImageProps> = ({
           alt={imagePrompt || label}
           fill
           priority
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 20vw, 15vw"
           style={{
             objectFit: 'cover',
           }}
