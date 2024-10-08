@@ -1,24 +1,3 @@
-// 'use server'
-
-// import { Button } from '@/components/ui/button'
-// import {
-//   Collapsible,
-//   CollapsibleContent,
-//   CollapsibleTrigger,
-// } from '@/components/ui/collapsible'
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogHeader,
-//   DialogTitle,
-// } from '@/components/ui/dialog'
-// import { Input } from '@/components/ui/input'
-// import { Separator } from '@/components/ui/separator'
-// import { UpdateUsernameForm } from '@/components/UpdateUsernameForm'
-// import { serverSupabase } from '@/lib/supabase/server'
-// import { ChevronDownIcon } from 'lucide-react'
-
 'use client'
 
 import { Button } from '@/components/ui/button'
@@ -89,6 +68,10 @@ export function OnboardingDialog() {
                 the stream to support both images and text.
               </li>
               <li>
+                React's experimental compiler is used to optimize performance
+                and simplify the DX.
+              </li>
+              <li>
                 Uses <strong>GPT 4o</strong> to generate the story and{' '}
                 <strong>Black Forest Labs' FLUX</strong> for fast image
                 generation.
@@ -149,7 +132,11 @@ export function OnboardingDialog() {
                   className="text-center"
                 />
                 <div className="flex justify-between">
-                  <Button variant="ghost" onClick={handlePreviousPage}>
+                  <Button
+                    variant="ghost"
+                    type="button" // tell the form we're not related to it
+                    onClick={handlePreviousPage}
+                  >
                     Back
                   </Button>
                   <Button type="submit">Begin</Button>
