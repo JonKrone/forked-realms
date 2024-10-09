@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "supabase:update-prod-secrets": "supabase secrets set --env-file supabase/.env",
+    "supabase:deploy-functions": "supabase functions deploy keep-supabase-alive --no-verify-jwt",
+    "supabase:serve-functions": "supabase start && supabase functions serve --env-file supabase/.env",
+    "supabase:test-keep-alive": "curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/keep-supabase-alive'"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^0.0.51",
@@ -30,6 +34,7 @@
     "lucide-react": "^0.446.0",
     "next": "^15.0.0-rc.0",
     "next-safe-action": "^7.9.3",
+    "nuqs": "^1.20.0",
     "react": "^19.0.0-rc-459fd418-20241001",
     "react-dom": "^19.0.0-rc-459fd418-20241001",
     "react-hook-form": "^7.53.0",
