@@ -1,74 +1,88 @@
-'use server'
+"use server";
 
-import { models } from '@/lib/models'
-import { imageModels, replicate } from '@/lib/replicate'
-import { actionClient } from '@/lib/safe-action'
-import { streamObject } from 'ai'
-import { createStreamableValue } from 'ai/rsc'
-import { z } from 'zod'
+import { models } from "@/lib/models";
+import { imageModels, replicate } from "@/lib/replicate";
+import { actionClient } from "@/lib/safe-action";
+import { APICallError, RetryError, streamObject } from "ai";
+import { createStreamableValue } from "ai/rsc";
+import { z } from "zod";
 
 export const generateContinuations = actionClient
   .schema(z.object({ storySteps: z.string() }))
   .action(async ({ parsedInput: { storySteps } }) => {
-    const stream = createStreamableValue<string>('')
-
-    ;(async () => {
+    const stream = createStreamableValue<string>("");
+    (async () => {
       try {
-        const result = await _generateContinuations(storySteps)
+        const result = await _generateContinuations(storySteps);
 
-        let imagesRequested = 0
-        let imagesGenerated = 0
-        let doneWithContinuations = false
+        let imagesRequested = 0;
+        let imagesGenerated = 0;
+        let doneWithContinuations = false;
 
         for await (const partOfTheStory of result.elementStream) {
-          stream.update(JSON.stringify(partOfTheStory))
-          imagesRequested += 1
-          ;(async () => {
+          stream.update(JSON.stringify(partOfTheStory));
+          imagesRequested += 1;
+          (async () => {
             try {
-              const imageUrl = await _generateImage(partOfTheStory.imagePrompt)
+              const imageUrl = await _generateImage(partOfTheStory.imagePrompt);
               stream.update(
                 JSON.stringify({
                   nextPartOfTheStory: partOfTheStory.nextPartOfTheStory,
                   imagePrompt: partOfTheStory.imagePrompt,
                   imageUrl: imageUrl,
-                })
-              )
+                }),
+              );
 
-              imagesGenerated += 1
+              imagesGenerated += 1;
               if (
                 doneWithContinuations &&
                 imagesGenerated === imagesRequested
               ) {
-                stream.done()
+                stream.done();
               }
             } catch (error) {
               // Handle image generation error by closing the stream
-              console.error('Error generating image', error)
-              stream.done()
+              console.error("Error generating image", error);
+              stream.done();
+              // stream.error(new Error('Error generating image'))
             }
-          })()
+          })();
         }
 
-        doneWithContinuations = true
+        doneWithContinuations = true;
       } catch (error) {
         // Handle continuation generation error by closing the stream
-        console.error('Error generating continuations', error)
-        stream.done()
+        if (error instanceof RetryError) {
+          if (error.lastError instanceof APICallError) {
+            console.log("error.lastError", error.lastError);
+            if (error.lastError.statusCode === 429) {
+              stream.error({
+                error: "rate-limit-exceeded",
+              });
+              return;
+            }
+          }
+        }
+        stream.error({
+          error: "Something went wrong",
+        });
       }
-    })()
+    })();
 
-    return { stream: stream.value }
-  })
+    return { stream: stream.value };
+  });
 
 async function _generateContinuations(storySteps: string) {
   const result = await streamObject({
     model: models.openai.gpt4o,
-    output: 'array',
+    output: "array",
     schema: z.object({
-      nextPartOfTheStory: z.string().describe('The next part of the story'),
-      imagePrompt: z.string().describe('The prompt for the image'),
+      nextPartOfTheStory: z.string().describe("The next part of the story"),
+      imagePrompt: z.string().describe("The prompt for the image"),
     }),
-    system: `Generate 3 creative and unique continuations of a given story, drawing inspiration from previous segments where relevant or humorous. The tone should be quirky, intuitive, and appealing to an audience of 25-40-year-old tech-savvy individuals.
+    maxRetries: 1,
+    system:
+      `Generate 3 creative and unique continuations of a given story, drawing inspiration from previous segments where relevant or humorous. The tone should be quirky, intuitive, and appealing to an audience of 25-40-year-old tech-savvy individuals.
 
 # Steps
 
@@ -101,25 +115,25 @@ Story Steps:
 - Keep in mind the tech-savvy nature of the audience and incorporate tech-related humor or scenarios where applicable.
 - Don't prefix your continuations with numbering such as "1. ", "2. ", etc.`,
     prompt: `The story so far: ${storySteps}`,
-  })
+  });
 
-  return result
+  return result;
 }
 
 export const generateImage = actionClient
   .schema(z.object({ prompt: z.string() }))
   .action(async ({ parsedInput: { prompt } }) => {
-    const imageUrl = await _generateImage(prompt)
-    return { imageUrl }
-  })
+    const imageUrl = await _generateImage(prompt);
+    return { imageUrl };
+  });
 
 async function _generateImage(prompt: string) {
   const [imageUrl] = (await replicate.run(imageModels.blackForestLabs.schnell, {
     input: {
       prompt,
-      aspect_ratio: '1:1', // 3:4, 2:3, 3:4, 9:21?
+      aspect_ratio: "1:1", // 3:4, 2:3, 3:4, 9:21?
     },
-  })) as string[]
+  })) as string[];
 
-  return imageUrl
+  return imageUrl;
 }

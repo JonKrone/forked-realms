@@ -2,19 +2,26 @@
 
 import { generateContinuations, generateImage } from '@/app/actions/stories'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Background,
   Edge,
   Node,
   NodeMouseHandler,
   ReactFlow,
-  useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { generateId } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { FC, useCallback, useEffect, useMemo, useState } from 'react'
 import { getLayoutedElements } from '../../lib/node-flow-layout'
 import { StoryCard, StoryCardData, StoryCardNode } from './StoryCard'
+
+type ClientErrors = 'rate-limit-exceeded' | 'something-went-wrong'
 
 const StartingStories = [
   "In a world where shadows have their own secrets, you find a key that doesn't fit any lock you've ever seen.",
@@ -33,8 +40,8 @@ const NodeTypes = {
   storyCard: StoryCard,
 }
 
-export default function StoryFlow() {
-  const { fitView } = useReactFlow()
+export function StoryFlow() {
+  const [errorCode, setErrorCode] = useState<string | null>(null)
   const [{ nodes, edges }, setState] = useState<{
     nodes: StoryCardNode[]
     edges: Edge[]
@@ -51,11 +58,11 @@ export default function StoryFlow() {
     edges: [],
   })
 
-  // initial generation
+  // initial generations
   useEffect(() => {
     const generateImageForRoot = async () => {
       const rootNode = nodes[0]
-      const imagePrompt = `Create an atmospheric and mysterious scene inspired by the beginning line of this story: '${rootNode.data.label}'. The image should capture a sense of intrigue and wonder, with hints of the unknown. The lighting should be dramatic, with deep shadows and subtle highlights that suggest hidden elements in the background. The environment can feel surreal or slightly otherworldly, with textures and objects that invite curiosity.`
+      const imagePrompt = `Create a scene inspired by the beginning line of this story: '${rootNode.data.label}'. The image should capture a sense of intrigue and wonder, with hints of the unknown. The lighting should be dramatic and subtle highlights suggest hidden elements in the background. The environment can feel surreal or slightly otherworldly, with textures and objects that invite curiosity.`
       const image = await generateImage({ prompt: imagePrompt })
       if (!image) return
 
@@ -65,7 +72,6 @@ export default function StoryFlow() {
     }
 
     generateImageForRoot()
-
     imagineStorySteps(nodes)
   }, [])
 
@@ -75,7 +81,7 @@ export default function StoryFlow() {
   ) => {
     if (!node.data.ephemeral) return
 
-    // generate new nodes
+    // generate next story steps for the user to select from
     imagineStorySteps(
       getPathToRoot(layoutedNodes, layoutedEdges, node.id) as StoryCardNode[]
     )
@@ -133,51 +139,59 @@ export default function StoryFlow() {
     if (!result?.data) return
 
     // listen for streamed continuations and images
-    for await (const delta of readStreamableValue(result.data.stream)) {
-      if (!delta) continue // empty string is the first value fed to the stream
+    try {
+      for await (const delta of readStreamableValue(result.data.stream)) {
+        if (!delta) continue // empty string is the first value fed to the stream
 
-      try {
-        const parsedDelta = JSON.parse(delta || '') as {
-          nextPartOfTheStory: string
-          imagePrompt: string
-          imageUrl: string
-        }
-
-        setState((state) => {
-          // If the new data contains an imageUrl, update the existing node with the imageUrl
-          if (parsedDelta.imageUrl) {
-            const nodeToChange = state.nodes.find(
-              (n) => n.data.label === parsedDelta.nextPartOfTheStory
-            )
-            if (nodeToChange) {
-              nodeToChange.data.imageUrl = parsedDelta.imageUrl
-              nodeToChange.data.imagePrompt = parsedDelta.imagePrompt
-            }
-
-            return {
-              ...state,
-              nodes: [...state.nodes],
-            }
-          } else {
-            // StrictMode invokes setState callbacks twice, so the node we're editing is either empty
-            // or already has this story step.
-            const nodeToChange = newNodes.find(
-              (n) =>
-                n.data.label === parsedDelta.nextPartOfTheStory ||
-                n.data.label === ''
-            )
-            if (nodeToChange) {
-              nodeToChange.data.label = parsedDelta.nextPartOfTheStory
-            }
-
-            return {
-              ...state,
-              nodes: [...state.nodes],
-            }
+        try {
+          const parsedDelta = JSON.parse(delta || '') as {
+            nextPartOfTheStory: string
+            imagePrompt: string
+            imageUrl: string
           }
-        })
-      } catch (e) {
-        console.error('Error parsing story continuations', e)
+
+          setState((state) => {
+            // If the new data contains an imageUrl, update the existing node with the imageUrl
+            if (parsedDelta.imageUrl) {
+              const nodeToChange = state.nodes.find(
+                (n) => n.data.label === parsedDelta.nextPartOfTheStory
+              )
+              if (nodeToChange) {
+                nodeToChange.data.imageUrl = parsedDelta.imageUrl
+                nodeToChange.data.imagePrompt = parsedDelta.imagePrompt
+              }
+
+              return {
+                ...state,
+                nodes: [...state.nodes],
+              }
+            } else {
+              // StrictMode invokes setState callbacks twice, so the node we're editing is either empty
+              // or already has this story step.
+              const nodeToChange = newNodes.find(
+                (n) =>
+                  n.data.label === parsedDelta.nextPartOfTheStory ||
+                  n.data.label === ''
+              )
+              if (nodeToChange) {
+                nodeToChange.data.label = parsedDelta.nextPartOfTheStory
+              }
+
+              return {
+                ...state,
+                nodes: [...state.nodes],
+              }
+            }
+          })
+        } catch (e) {
+          console.error('Error parsing story continuations', e)
+        }
+      }
+    } catch (e) {
+      console.error('Error generating story continuations', e)
+      const err = e as { error: ClientErrors }
+      if (err.error === 'rate-limit-exceeded') {
+        setErrorCode('rate-limit-exceeded')
       }
     }
   }, [])
@@ -189,6 +203,9 @@ export default function StoryFlow() {
 
   return (
     <>
+      {errorCode && (
+        <KnownErrorDialog code={errorCode} onClose={() => setErrorCode(null)} />
+      )}
       <ReactFlow
         nodes={layoutedNodes as StoryCardNode[]}
         edges={layoutedEdges}
@@ -282,4 +299,39 @@ function createNode({
     },
     position: { x: 0, y: 0 },
   }
+}
+
+const fallbackError = (
+  <>
+    Something went wrong. Please try again.
+    <br />
+    If this persists, please reach out to me at jonathankrone@gmail.com.
+  </>
+)
+const KnownErrorDialog: FC<{ code: string; onClose: () => void }> = ({
+  code,
+  onClose,
+}) => {
+  const content = {
+    'rate-limit-exceeded': (
+      <>
+        This project has exceeded its monthly API limits.
+        <br />
+        Please reach out to me at jonathankrone@gmail.com to talk about this
+        small experiment.
+      </>
+    ),
+  }[code]
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogTitle>Whoops!</DialogTitle>
+        <DialogDescription>{content || fallbackError}</DialogDescription>
+      </DialogContent>
+    </Dialog>
+  )
 }

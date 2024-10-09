@@ -1,7 +1,8 @@
 import { Navbar } from '@/components/Navbar'
-import { OnboardingDialogGuard } from '@/components/OnboardingDialogGuard'
+import { Onboarding } from '@/components/Onboarding/Onboarding'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
+
 import './globals.css'
 
 const geistSans = localFont({
@@ -32,7 +33,7 @@ export default function RootLayout({
         className={`box-border ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <OnboardingDialogGuard />
+        <Onboarding />
         <Navbar />
       </body>
     </html>

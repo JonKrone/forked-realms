@@ -10,7 +10,7 @@ export const updateUsername = actionClient
       username: zfd.text(),
     })
   )
-  .stateAction(({ parsedInput: { username } }) => {
+  .stateAction(async ({ parsedInput: { username } }) => {
     return serverSupabase().auth.updateUser({
       data: {
         username,

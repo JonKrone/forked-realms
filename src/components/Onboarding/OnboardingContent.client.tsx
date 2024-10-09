@@ -1,6 +1,6 @@
 'use client'
-
-import { Button } from '@/components/ui/button'
+import { useOnboardingParams } from '@/components/Onboarding/searchParams'
+import { Button, ButtonProps } from '@/components/ui/button'
 import {
   Collapsible,
   CollapsibleContent,
@@ -14,30 +14,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { UpdateUsernameForm } from '@/components/UpdateUsernameForm'
+import { UpdateUsernameForm } from '@/components/UpdateUsernameForm.client'
 import { ChevronDownIcon } from 'lucide-react'
-import { useState } from 'react'
+import { FC } from 'react'
 
-export function OnboardingDialog() {
-  const [currentPage, setCurrentPage] = useState(0)
-
-  const handleNextPage = () => {
-    setCurrentPage((p) => p + 1)
-  }
-
-  const handlePreviousPage = () => {
-    setCurrentPage((p) => p - 1)
-  }
+export function OnboardingContent() {
+  const [page] = useOnboardingParams()
 
   return (
-    <Dialog open={true}>
+    <Dialog open>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
             Welcome
           </DialogTitle>
         </DialogHeader>
-        {currentPage === 0 && (
+        {page === 'welcome' && (
           <>
             <DialogDescription>
               Welcome to <strong>Forked Realms</strong>, a text-and-image
@@ -47,11 +39,11 @@ export function OnboardingDialog() {
               Dive into a world where every decision forks a new reality!
             </DialogDescription>
             <div className="flex justify-end">
-              <Button onClick={handleNextPage}>Next</Button>
+              <NextPageButton />
             </div>
           </>
         )}
-        {currentPage === 1 && (
+        {page === 'description' && (
           <>
             <DialogDescription className="space-y-3">
               This project was created as an experiment in using cutting-edge
@@ -111,14 +103,12 @@ export function OnboardingDialog() {
               </CollapsibleContent>
             </Collapsible>
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={handlePreviousPage}>
-                Back
-              </Button>
-              <Button onClick={handleNextPage}>Next</Button>
+              <PreviousPageButton />
+              <NextPageButton />
             </div>
           </>
         )}
-        {currentPage === 2 && (
+        {page === 'username' && (
           <UpdateUsernameForm>
             <div className="grid w-full items-center gap-4">
               <div className="flex flex-col space-y-3">
@@ -132,13 +122,9 @@ export function OnboardingDialog() {
                   className="text-center"
                 />
                 <div className="flex justify-between">
-                  <Button
-                    variant="ghost"
+                  <PreviousPageButton
                     type="button" // tell the form we're not related to it
-                    onClick={handlePreviousPage}
-                  >
-                    Back
-                  </Button>
+                  />
                   <Button type="submit">Begin</Button>
                 </div>
               </div>
@@ -147,5 +133,35 @@ export function OnboardingDialog() {
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+export const NextPageButton = () => {
+  const [_, setPage] = useOnboardingParams()
+
+  return (
+    <Button
+      onClick={() =>
+        setPage((p) => (p === 'description' ? 'username' : 'description'))
+      }
+    >
+      Next
+    </Button>
+  )
+}
+
+export const PreviousPageButton: FC<ButtonProps> = (props) => {
+  const [_, setPage] = useOnboardingParams()
+
+  return (
+    <Button
+      variant="ghost"
+      onClick={() =>
+        setPage((p) => (p === 'description' ? 'welcome' : 'description'))
+      }
+      {...props}
+    >
+      Previous
+    </Button>
   )
 }

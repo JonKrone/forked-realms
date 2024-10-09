@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { UpdateUsernameForm } from '@/components/UpdateUsernameForm'
+import { UpdateUsernameForm } from '@/components/UpdateUsernameForm.client'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRef, useState } from 'react'
 

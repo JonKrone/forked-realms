@@ -1,8 +1,10 @@
+'use client'
+
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { Handle, NodeProps, Position } from '@xyflow/react'
 
-import { SmartImage } from '@/components/StoryFlow/SmartImage'
+import { SmartImage } from '@/components/StoryFlow/SmartImage.client'
 import { Node } from '@xyflow/react'
 
 export type StoryCardData = {

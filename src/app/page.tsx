@@ -1,5 +1,5 @@
 import { ReactFlowProvider } from '@xyflow/react'
-import StoryFlow from '../components/StoryFlow/StoryFlow'
+import { StoryFlow } from '../components/StoryFlow/StoryFlow.client'
 
 export default function Home() {
   return (
