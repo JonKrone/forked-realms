@@ -9,9 +9,9 @@ import { Node } from '@xyflow/react'
 
 export type StoryCardData = {
   label: string
-  ephemeral: boolean
   root: boolean
   leaf: boolean
+  characterDescriptions: string
   imageUrl?: string
   imagePrompt?: string
 }

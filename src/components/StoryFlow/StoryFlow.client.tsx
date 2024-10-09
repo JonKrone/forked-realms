@@ -1,12 +1,11 @@
 'use client'
 
-import { generateContinuations, generateImage } from '@/app/actions/stories'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  ClientErrors,
+  generateContinuations,
+  generateImage,
+} from '@/app/actions/stories'
+import { KnownErrorDialog } from '@/components/StoryFlow/KnownErrorDialog'
 import {
   Background,
   Edge,
@@ -17,11 +16,9 @@ import {
 import '@xyflow/react/dist/style.css'
 import { generateId } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
-import { FC, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getLayoutedElements } from '../../lib/node-flow-layout'
 import { StoryCard, StoryCardData, StoryCardNode } from './StoryCard'
-
-type ClientErrors = 'rate-limit-exceeded' | 'something-went-wrong'
 
 const StartingStories = [
   "In a world where shadows have their own secrets, you find a key that doesn't fit any lock you've ever seen.",
@@ -50,9 +47,9 @@ export function StoryFlow() {
       createNode({
         label:
           StartingStories[Math.floor(Math.random() * StartingStories.length)],
-        ephemeral: false,
         root: true,
         leaf: true, // initially, the root is also a leaf
+        characterDescriptions: '',
       }),
     ],
     edges: [],
@@ -79,7 +76,7 @@ export function StoryFlow() {
     _evt,
     node
   ) => {
-    if (!node.data.ephemeral) return
+    if (!node.data.leaf) return
 
     // generate next story steps for the user to select from
     imagineStorySteps(
@@ -92,26 +89,27 @@ export function StoryFlow() {
     if (!leafNode) {
       throw new Error('No leaf node found') // shouldn't happen
     }
+
     // mark the leaf node as a part of a story.
     // and generate 3 new template nodes for the story
     const newNodes = [
       createNode({
         label: '',
-        ephemeral: true,
         root: false,
         leaf: true,
+        characterDescriptions: '',
       }),
       createNode({
         label: '',
-        ephemeral: true,
         root: false,
         leaf: true,
+        characterDescriptions: '',
       }),
       createNode({
         label: '',
-        ephemeral: true,
         root: false,
         leaf: true,
+        characterDescriptions: '',
       }),
     ]
     const newEdges = newNodes.map((n, i) => ({
@@ -123,7 +121,6 @@ export function StoryFlow() {
     setState((state) => {
       const thisLeaf = state.nodes.find((n) => n.id === leafNode.id)
       if (!thisLeaf) return state
-      thisLeaf.data.ephemeral = false
       thisLeaf.data.leaf = false
 
       return {
@@ -135,6 +132,7 @@ export function StoryFlow() {
     // begin generating continuations
     const result = await generateContinuations({
       storySteps: getStorySteps(steps),
+      characterDescriptions: leafNode.data.characterDescriptions,
     })
     if (!result?.data) return
 
@@ -146,6 +144,7 @@ export function StoryFlow() {
         try {
           const parsedDelta = JSON.parse(delta || '') as {
             nextPartOfTheStory: string
+            characterDescriptions: string
             imagePrompt: string
             imageUrl: string
           }
@@ -175,6 +174,8 @@ export function StoryFlow() {
               )
               if (nodeToChange) {
                 nodeToChange.data.label = parsedDelta.nextPartOfTheStory
+                nodeToChange.data.characterDescriptions =
+                  parsedDelta.characterDescriptions
               }
 
               return {
@@ -189,7 +190,7 @@ export function StoryFlow() {
       }
     } catch (e) {
       console.error('Error generating story continuations', e)
-      const err = e as { error: ClientErrors }
+      const err = e as ClientErrors
       if (err.error === 'rate-limit-exceeded') {
         setErrorCode('rate-limit-exceeded')
       }
@@ -280,9 +281,9 @@ function getStorySteps(nodes: StoryCardNode[]) {
 /** Simple helper to create a new story card node */
 function createNode({
   label,
-  ephemeral,
   root,
   leaf,
+  characterDescriptions,
   imageUrl,
   imagePrompt,
 }: StoryCardData): StoryCardNode {
@@ -291,47 +292,12 @@ function createNode({
     type: 'storyCard',
     data: {
       label,
-      ephemeral,
       root,
       leaf,
+      characterDescriptions,
       imageUrl,
       imagePrompt,
     },
     position: { x: 0, y: 0 },
   }
-}
-
-const fallbackError = (
-  <>
-    Something went wrong. Please try again.
-    <br />
-    If this persists, please reach out to me at jonathankrone@gmail.com.
-  </>
-)
-const KnownErrorDialog: FC<{ code: string; onClose: () => void }> = ({
-  code,
-  onClose,
-}) => {
-  const content = {
-    'rate-limit-exceeded': (
-      <>
-        This project has exceeded its monthly API limits.
-        <br />
-        Please reach out to me at jonathankrone@gmail.com to talk about this
-        small experiment.
-      </>
-    ),
-  }[code]
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <DialogTitle>Whoops!</DialogTitle>
-        <DialogDescription>{content || fallbackError}</DialogDescription>
-      </DialogContent>
-    </Dialog>
-  )
 }
