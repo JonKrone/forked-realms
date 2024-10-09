@@ -9,7 +9,7 @@ if (!process.env.SUPABASE_API_KEY) {
   throw new Error('SUPABASE_API_KEY is not set')
 }
 
-export const serverSupabase = () => {
+export const createClient = () => {
   const cookieStore = cookies()
 
   return createServerClient(

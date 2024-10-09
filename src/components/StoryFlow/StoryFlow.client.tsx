@@ -37,7 +37,7 @@ const NodeTypes = {
   storyCard: StoryCard,
 }
 
-export function StoryFlow() {
+export function StoryFlow({ rootId }: { rootId: string }) {
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [{ nodes, edges }, setState] = useState<{
     nodes: StoryCardNode[]
@@ -280,15 +280,16 @@ function getStorySteps(nodes: StoryCardNode[]) {
 
 /** Simple helper to create a new story card node */
 function createNode({
+  id,
   label,
   root,
   leaf,
   characterDescriptions,
   imageUrl,
   imagePrompt,
-}: StoryCardData): StoryCardNode {
+}: StoryCardData & { id?: string }): StoryCardNode {
   return {
-    id: generateId(6),
+    id: id || generateId(6),
     type: 'storyCard',
     data: {
       label,

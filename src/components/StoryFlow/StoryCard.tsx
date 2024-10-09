@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Handle, NodeProps, Position } from '@xyflow/react'
 
 import { SmartImage } from '@/components/StoryFlow/SmartImage.client'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Node } from '@xyflow/react'
 
 export type StoryCardData = {
@@ -49,15 +50,23 @@ export const StoryCard = ({ data }: NodeProps<StoryCardNode>) => {
                 : 'bg-slate-800 border border-slate-700'
             )}
           >
-            <div
-              className={cn(
-                'font-semibold text-lg leading-tight p-5',
-                root && 'text-center'
-              )}
-            >
-              {label}
-            </div>
-            {/* <Skeleton /> */}
+            {label ? (
+              <div
+                className={cn(
+                  'font-semibold text-lg leading-tight p-5',
+                  root && 'text-center'
+                )}
+              >
+                {label}
+              </div>
+            ) : (
+              <div className="w-full h-full space-y-2 p-5">
+                <Skeleton className="h-6 bg-secondary/10" />
+                <Skeleton className="h-6 bg-secondary/10" />
+                <Skeleton className="h-6 bg-secondary/10" />
+                <Skeleton className="h-6 bg-secondary/10" />
+              </div>
+            )}
           </div>
         </div>
         <SmartImage

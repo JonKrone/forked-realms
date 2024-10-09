@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "supabase:gen-types": "supabase gen types typescript --project-id pqbjakmoszxanenhqvcy > supabase/supabase.types.ts",
     "supabase:update-prod-secrets": "supabase secrets set --env-file supabase/.env",
     "supabase:deploy-functions": "supabase functions deploy keep-supabase-alive --no-verify-jwt",
     "supabase:serve-functions": "supabase start && supabase functions serve --env-file supabase/.env",

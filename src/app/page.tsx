@@ -1,12 +1,7 @@
-import { ReactFlowProvider } from '@xyflow/react'
-import { StoryFlow } from '../components/StoryFlow/StoryFlow.client'
+import { generateId } from 'ai'
+import { redirect } from 'next/navigation'
 
 export default function Home() {
-  return (
-    <div className="w-screen h-screen">
-      <ReactFlowProvider>
-        <StoryFlow />
-      </ReactFlowProvider>
-    </div>
-  )
+  const rootId = generateId()
+  redirect(`/story/${rootId}`)
 }
