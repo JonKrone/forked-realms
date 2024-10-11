@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Node } from '@xyflow/react'
 
 export type StoryCardData = {
-  label: string
+  id?: string
+  text: string
   root: boolean
   leaf: boolean
   characterDescriptions: string
@@ -25,7 +26,7 @@ const handleStyle = {
 }
 
 export const StoryCard = ({ data }: NodeProps<StoryCardNode>) => {
-  const { root, leaf, label, imagePrompt, imageUrl } = data
+  const { root, leaf, text, imagePrompt, imageUrl } = data
 
   return (
     <Card
@@ -50,14 +51,14 @@ export const StoryCard = ({ data }: NodeProps<StoryCardNode>) => {
                 : 'bg-slate-800 border border-slate-700'
             )}
           >
-            {label ? (
+            {text ? (
               <div
                 className={cn(
                   'font-semibold text-lg leading-tight p-5',
                   root && 'text-center'
                 )}
               >
-                {label}
+                {text}
               </div>
             ) : (
               <div className="w-full h-full space-y-2 p-5">
@@ -72,7 +73,7 @@ export const StoryCard = ({ data }: NodeProps<StoryCardNode>) => {
         <SmartImage
           imageUrl={imageUrl}
           imagePrompt={imagePrompt}
-          label={label}
+          label={text}
         />
         {!leaf && (
           <Handle

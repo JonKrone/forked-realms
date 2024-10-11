@@ -3,7 +3,8 @@
 import { models } from '@/lib/models'
 import { imageModels, replicate } from '@/lib/replicate'
 import { actionClient } from '@/lib/safe-action'
-import { APICallError, RetryError, streamObject } from 'ai'
+import { StoryNode } from '@/lib/supabase/story-node'
+import { APICallError, generateId, RetryError, streamObject } from 'ai'
 import { createStreamableValue } from 'ai/rsc'
 import { ApiError as ReplicateApiError } from 'replicate'
 import { z } from 'zod'
@@ -14,9 +15,24 @@ export type ClientErrors =
 
 export const generateContinuations = actionClient
   .schema(
-    z.object({ storySteps: z.string(), characterDescriptions: z.string() })
+    z.array(
+      z.object({
+        id: z.string().optional(),
+        text: z.string(),
+        root: z.boolean(),
+        leaf: z.boolean(),
+        characterDescriptions: z.string(),
+        imageUrl: z.string().optional(),
+        imagePrompt: z.string().optional(),
+      })
+    )
   )
-  .action(async ({ parsedInput: { storySteps, characterDescriptions } }) => {
+  .action(async ({ parsedInput: storyNodes }) => {
+    const storySteps = storyNodes
+      .map((node) => `<story-step>${node.text}</story-step>`)
+      .join('\n')
+    const characterDescriptions = storyNodes.at(-1)?.characterDescriptions || ''
+
     const stream = createStreamableValue<string, ClientErrors>('')
 
     let streamErrored = false
@@ -34,19 +50,23 @@ export const generateContinuations = actionClient
         for await (const partOfTheStory of result.elementStream) {
           if (streamErrored) return
 
-          stream.update(JSON.stringify(partOfTheStory))
+          const newNode = await StoryNode.create({
+            id: generateId(6),
+            text: partOfTheStory.nextPartOfTheStory,
+            character_descriptions: partOfTheStory.characterDescriptions,
+            image_prompt: partOfTheStory.imagePrompt,
+          })
+          stream.update(JSON.stringify(newNode))
 
           imagesRequested += 1
           ;(async () => {
             try {
               const imageUrl = await _generateImage(partOfTheStory.imagePrompt)
-              stream.update(
-                JSON.stringify({
-                  nextPartOfTheStory: partOfTheStory.nextPartOfTheStory,
-                  imagePrompt: partOfTheStory.imagePrompt,
-                  imageUrl: imageUrl,
-                })
-              )
+              const nodeWithImage = await StoryNode.update({
+                id: newNode.id,
+                image_url: imageUrl,
+              })
+              stream.update(JSON.stringify(nodeWithImage))
 
               imagesGenerated += 1
               if (
@@ -56,6 +76,7 @@ export const generateContinuations = actionClient
                 stream.done()
               }
             } catch (error) {
+              console.log('image generation error', error)
               streamErrored = true
               if ((error as ReplicateApiError)?.response?.status === 402) {
                 stream.error({
@@ -74,6 +95,8 @@ export const generateContinuations = actionClient
         doneWithContinuations = true
       } catch (error) {
         streamErrored = true
+
+        console.log('error', error)
 
         if (
           error instanceof RetryError &&

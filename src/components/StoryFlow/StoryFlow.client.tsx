@@ -45,8 +45,9 @@ export function StoryFlow({ rootId }: { rootId: string }) {
   }>({
     nodes: [
       createNode({
-        label:
-          StartingStories[Math.floor(Math.random() * StartingStories.length)],
+        text: StartingStories[
+          Math.floor(Math.random() * StartingStories.length)
+        ],
         root: true,
         leaf: true, // initially, the root is also a leaf
         characterDescriptions: '',
@@ -59,7 +60,7 @@ export function StoryFlow({ rootId }: { rootId: string }) {
   useEffect(() => {
     const generateImageForRoot = async () => {
       const rootNode = nodes[0]
-      const imagePrompt = `Create a scene inspired by the beginning line of this story: '${rootNode.data.label}'. The image should capture a sense of intrigue and wonder, with hints of the unknown. The lighting should be dramatic and subtle highlights suggest hidden elements in the background. The environment can feel surreal or slightly otherworldly, with textures and objects that invite curiosity.`
+      const imagePrompt = `Create a scene inspired by the beginning line of this story: '${rootNode.data.text}'. The image should capture a sense of intrigue and wonder, with hints of the unknown. The lighting should be dramatic and subtle highlights suggest hidden elements in the background. The environment can feel surreal or slightly otherworldly, with textures and objects that invite curiosity.`
       const image = await generateImage({ prompt: imagePrompt })
       if (!image) return
 
@@ -94,19 +95,19 @@ export function StoryFlow({ rootId }: { rootId: string }) {
     // and generate 3 new template nodes for the story
     const newNodes = [
       createNode({
-        label: '',
+        text: '',
         root: false,
         leaf: true,
         characterDescriptions: '',
       }),
       createNode({
-        label: '',
+        text: '',
         root: false,
         leaf: true,
         characterDescriptions: '',
       }),
       createNode({
-        label: '',
+        text: '',
         root: false,
         leaf: true,
         characterDescriptions: '',
@@ -130,10 +131,7 @@ export function StoryFlow({ rootId }: { rootId: string }) {
     })
 
     // begin generating continuations
-    const result = await generateContinuations({
-      storySteps: getStorySteps(steps),
-      characterDescriptions: leafNode.data.characterDescriptions,
-    })
+    const result = await generateContinuations(steps.map((s) => s.data))
     if (!result?.data) return
 
     // listen for streamed continuations and images
@@ -143,17 +141,18 @@ export function StoryFlow({ rootId }: { rootId: string }) {
 
         try {
           const parsedDelta = JSON.parse(delta || '') as {
-            nextPartOfTheStory: string
+            text: string
             characterDescriptions: string
             imagePrompt: string
             imageUrl: string
+            id: string
           }
 
           setState((state) => {
             // If the new data contains an imageUrl, update the existing node with the imageUrl
             if (parsedDelta.imageUrl) {
               const nodeToChange = state.nodes.find(
-                (n) => n.data.label === parsedDelta.nextPartOfTheStory
+                (n) => n.data.text === parsedDelta.text
               )
               if (nodeToChange) {
                 nodeToChange.data.imageUrl = parsedDelta.imageUrl
@@ -168,19 +167,29 @@ export function StoryFlow({ rootId }: { rootId: string }) {
               // StrictMode invokes setState callbacks twice, so the node we're editing is either empty
               // or already has this story step.
               const nodeToChange = newNodes.find(
-                (n) =>
-                  n.data.label === parsedDelta.nextPartOfTheStory ||
-                  n.data.label === ''
+                (n) => n.data.text === parsedDelta.text || n.data.text === ''
               )
+              let edges = state.edges
               if (nodeToChange) {
-                nodeToChange.data.label = parsedDelta.nextPartOfTheStory
+                edges = edges.map((e) => {
+                  if (e.source === nodeToChange.id) {
+                    return { ...e, source: parsedDelta.id }
+                  }
+                  if (e.target === nodeToChange.id) {
+                    return { ...e, target: parsedDelta.id }
+                  }
+                  return e
+                })
+
+                nodeToChange.id = parsedDelta.id
+                nodeToChange.data.text = parsedDelta.text
                 nodeToChange.data.characterDescriptions =
                   parsedDelta.characterDescriptions
               }
 
               return {
-                ...state,
                 nodes: [...state.nodes],
+                edges,
               }
             }
           })
@@ -190,8 +199,7 @@ export function StoryFlow({ rootId }: { rootId: string }) {
       }
     } catch (e) {
       console.error('Error generating story continuations', e)
-      const err = e as ClientErrors
-      if (err.error === 'rate-limit-exceeded') {
+      if ((e as ClientErrors).error === 'rate-limit-exceeded') {
         setErrorCode('rate-limit-exceeded')
       }
     }
@@ -202,6 +210,8 @@ export function StoryFlow({ rootId }: { rootId: string }) {
     [nodes, edges]
   )
 
+  console.log('layoutedNodes', layoutedNodes)
+  console.log('layoutedEdges', layoutedEdges)
   return (
     <>
       {errorCode && (
@@ -275,24 +285,24 @@ function getPathToRoot(nodes: Node[], edges: Edge[], nodeId: string): Node[] {
  * Returns a string of all the story steps in the order they appear in the story
  */
 function getStorySteps(nodes: StoryCardNode[]) {
-  return nodes.map((n) => `<story-step>${n.data.label}</story-step>`).join('\n')
+  return nodes.map((n) => `<story-step>${n.data.text}</story-step>`).join('\n')
 }
 
 /** Simple helper to create a new story card node */
 function createNode({
   id,
-  label,
+  text,
   root,
   leaf,
   characterDescriptions,
   imageUrl,
   imagePrompt,
-}: StoryCardData & { id?: string }): StoryCardNode {
+}: StoryCardData): StoryCardNode {
   return {
-    id: id || generateId(6),
+    id: id || `temp-${generateId(6)}`,
     type: 'storyCard',
     data: {
-      label,
+      text,
       root,
       leaf,
       characterDescriptions,

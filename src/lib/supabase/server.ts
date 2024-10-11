@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { Database } from '../../../supabase/supabase.types'
 
 if (!process.env.SUPABASE_URL) {
   throw new Error('SUPABASE_URL is not set')
@@ -12,7 +13,7 @@ if (!process.env.SUPABASE_API_KEY) {
 export const createClient = () => {
   const cookieStore = cookies()
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_API_KEY!,
     {
