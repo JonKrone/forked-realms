@@ -3,7 +3,8 @@
 import { models } from '@/lib/models'
 import { imageModels, replicate } from '@/lib/replicate'
 import { actionClient } from '@/lib/safe-action'
-import { StoryNode } from '@/lib/supabase/story-node'
+import { StoryNode, StoryNodeCreateParams } from '@/lib/supabase/story-node'
+import { camelizeKeys } from '@/lib/utils'
 import { APICallError, generateId, RetryError, streamObject } from 'ai'
 import { createStreamableValue } from 'ai/rsc'
 import { ApiError as ReplicateApiError } from 'replicate'
@@ -13,17 +14,11 @@ export type ClientErrors =
   | { error: 'rate-limit-exceeded' }
   | { error: 'something-went-wrong' }
 
-export const ensureRootNode = actionClient
-  .schema(z.object({ nodeId: z.string(), text: z.string() }))
-  .action(async ({ parsedInput: { nodeId, text } }) => {
-    let node = await StoryNode.get(nodeId)
-    if (!node) {
-      node = await StoryNode.create({
-        id: nodeId || generateId(6),
-        text,
-      })
-    }
-    return { node }
+export const generateImage = actionClient
+  .schema(z.object({ prompt: z.string() }))
+  .action(async ({ parsedInput: { prompt } }) => {
+    const imageUrl = await _generateImage(prompt)
+    return { imageUrl }
   })
 
 export const generateContinuations = actionClient
@@ -44,105 +39,101 @@ export const generateContinuations = actionClient
     })
   )
   .action(async ({ parsedInput: { parentId, storyNodes } }) => {
+    const stream = createStreamableValue<string, ClientErrors>('')
+
     const storySteps = storyNodes
       .map((node) => `<story-step>${node.text}</story-step>`)
       .join('\n')
     const characterDescriptions = storyNodes.at(-1)?.characterDescriptions || ''
 
-    const stream = createStreamableValue<string, ClientErrors>('')
-
-    let streamErrored = false
-    ;(async () => {
-      try {
-        const result = await _generateContinuations(
-          storySteps,
-          characterDescriptions
-        )
-
-        let imagesRequested = 0
-        let imagesGenerated = 0
-        let doneWithContinuations = false
-
-        for await (const partOfTheStory of result.elementStream) {
-          if (streamErrored) return
-
-          const nodeParams = {
-            id: generateId(6),
-            parent_id: parentId,
-            text: partOfTheStory.nextPartOfTheStory,
-            character_descriptions: partOfTheStory.characterDescriptions,
-            image_prompt: partOfTheStory.imagePrompt,
-          }
-          // Don't await this, we want to stream the node as soon as possible
-          StoryNode.create(nodeParams)
-
-          stream.update(JSON.stringify(nodeParams))
-
-          imagesRequested += 1
-          ;(async () => {
-            try {
-              const imageUrl = await _generateImage(partOfTheStory.imagePrompt)
-              // Don't await this, we want to stream the node as soon as possible
-              StoryNode.update({
-                id: nodeParams.id,
-                image_url: imageUrl,
-              })
-              stream.update(
-                JSON.stringify({
-                  ...nodeParams,
-                  image_url: imageUrl,
-                })
-              )
-
-              imagesGenerated += 1
-              if (
-                doneWithContinuations &&
-                imagesGenerated === imagesRequested
-              ) {
-                stream.done()
-              }
-            } catch (error) {
-              console.log('image generation error', error)
-              streamErrored = true
-              if ((error as ReplicateApiError)?.response?.status === 402) {
-                stream.error({
-                  error: 'rate-limit-exceeded',
-                })
-                return
-              }
-
-              stream.error({
-                error: 'something-went-wrong',
-              })
-            }
-          })()
-        }
-
-        doneWithContinuations = true
-      } catch (error) {
-        streamErrored = true
-
-        console.log('error', error)
-
-        if (
-          error instanceof RetryError &&
-          error.lastError instanceof APICallError &&
-          error.lastError.statusCode === 429
-        ) {
-          stream.error({
-            error: 'rate-limit-exceeded',
-          })
-          return
-        }
-
-        stream.error({
-          error: 'something-went-wrong',
-        })
-      }
-    })()
+    // Kick off the continuation generation in the background. Don't want to block the stream
+    generateStoryContinuations(
+      stream,
+      storySteps,
+      characterDescriptions,
+      parentId
+    )
 
     return { stream: stream.value }
   })
+
+type ContinuationsStream = ReturnType<
+  typeof createStreamableValue<string, ClientErrors>
+>
+async function generateStoryContinuations(
+  stream: ContinuationsStream,
+  storySteps: string,
+  characterDescriptions: string,
+  parentId?: string
+) {
+  let streamErrored = false
+  let imageGenerationPromises: Promise<void>[] = []
+
+  try {
+    const continuations = await _generateContinuations(
+      storySteps,
+      characterDescriptions
+    )
+
+    for await (const continuation of continuations.elementStream) {
+      if (streamErrored) break
+
+      const nodeParams: StoryNodeCreateParams = {
+        id: generateId(6),
+        parent_id: parentId,
+        text: continuation.nextPartOfTheStory,
+        character_descriptions: continuation.characterDescriptions,
+        image_prompt: continuation.imagePrompt,
+      }
+
+      // Tell the client about the new node
+      stream.update(JSON.stringify(camelizeKeys(nodeParams)))
+
+      // Create the node but don't await it, we want to stream the node as soon as possible
+      StoryNode.create(nodeParams).catch((error) => {
+        streamErrored = true
+        console.log('Error creating node', nodeParams.id, error)
+        handleError(error, stream)
+      })
+
+      // Generate an image for this story node, send it to the client, and save it to the database
+      const imagePromise = generateImageForNode(nodeParams, stream).catch(
+        (error) => {
+          streamErrored = true
+          console.log('Error generating image for node', nodeParams.id, error)
+          handleError(error, stream)
+        }
+      )
+
+      // Keep track of the image generations so we can wait for them all to complete before ending
+      // the stream
+      imageGenerationPromises.push(imagePromise)
+    }
+
+    await Promise.allSettled(imageGenerationPromises)
+
+    if (!streamErrored) {
+      stream.done()
+    }
+  } catch (error) {
+    streamErrored = true
+    console.log('Error generating continuations', error)
+    handleError(error, stream)
+  }
+}
+
+async function generateImageForNode(
+  nodeParams: StoryNodeCreateParams,
+  stream: ContinuationsStream
+) {
+  const imageUrl = await _generateImage(nodeParams.image_prompt!)
+
+  // Tell the client about the new image URL
+  stream.update(JSON.stringify(camelizeKeys({ ...nodeParams, imageUrl })))
+
+  // Update the story node with the image URL
+  StoryNode.update({ id: nodeParams.id, image_url: imageUrl })
+}
 
 async function _generateContinuations(
   storySteps: string,
@@ -221,21 +212,13 @@ Previous Character Descriptions:
 - Keep in mind the tech-savvy nature of the audience and incorporate tech-related humor or scenarios where applicable.
 
 - Do not prefix your continuations with numbering such as "1.", "2.", etc.`,
-    prompt: `The story so far: ${storySteps}
-    Previous Character Descriptions: ${characterDescriptions || 'None so far.'}`,
+    prompt: `<story-steps>${storySteps}</story-steps>
+    <previous-character-descriptions>${characterDescriptions || 'None so far.'}</previous-character-descriptions>`,
   })
 
   return result
 }
 
-export const generateImage = actionClient
-  .schema(z.object({ prompt: z.string() }))
-  .action(async ({ parsedInput: { prompt } }) => {
-    const imageUrl = await _generateImage(prompt)
-    return { imageUrl }
-  })
-
-// TODO: Consider supporting a `storyNodeId` and implicitly saving the imageUrl to the node
 async function _generateImage(prompt: string) {
   const [imageUrl] = (await replicate.run(imageModels.blackForestLabs.schnell, {
     input: {
@@ -245,4 +228,24 @@ async function _generateImage(prompt: string) {
   })) as string[]
 
   return imageUrl
+}
+
+function handleError(error: any, stream: ContinuationsStream) {
+  if (isOpenAIRateLimitError(error) || isReplicateRateLimitError(error)) {
+    stream.error({ error: 'rate-limit-exceeded' })
+  } else {
+    stream.error({ error: 'something-went-wrong' })
+  }
+}
+
+function isOpenAIRateLimitError(error: any): error is RetryError {
+  return (
+    error instanceof RetryError &&
+    error.lastError instanceof APICallError &&
+    error.lastError.statusCode === 429
+  )
+}
+
+function isReplicateRateLimitError(error: any) {
+  return (error as ReplicateApiError)?.response?.status === 402
 }

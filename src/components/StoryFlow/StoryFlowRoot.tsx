@@ -1,27 +1,25 @@
 'use server'
 
-import { ensureRootNode } from '@/app/actions/stories'
 import { StoryCardNode } from '@/components/StoryFlow/StoryCard'
 import { StoryFlow } from '@/components/StoryFlow/StoryFlow.client'
 import { StoryNode } from '@/lib/supabase/story-node'
 import { Edge } from '@xyflow/react'
 
 export default async function StoryFlowRoot({ rootId }: { rootId: string }) {
-  // get existing story nodes
   let storyNodes = await StoryNode.getStoryTree(rootId)
 
   // if no story nodes exist, create the root node
   if (storyNodes.length === 0) {
-    const rootNode = await ensureRootNode({
-      nodeId: rootId,
-      text: StartingStories[0],
+    const rootNode = await StoryNode.create({
+      id: rootId,
+      text: StartingStories[Math.floor(Math.random() * StartingStories.length)],
     })
 
-    if (!rootNode?.data?.node) {
+    if (!rootNode) {
       throw new Error('Failed to create root node')
     }
 
-    storyNodes = [rootNode.data.node]
+    storyNodes = [rootNode]
   }
 
   const { nodes, edges } = nodesAndEdgesFromStoryNodes(storyNodes)

@@ -6,6 +6,7 @@ import {
   generateImage,
 } from '@/app/actions/stories'
 import { KnownErrorDialog } from '@/components/StoryFlow/KnownErrorDialog'
+import { RotatingStarryBackground } from '@/components/StoryFlow/RotatingStarryBackground'
 import {
   Background,
   Edge,
@@ -128,68 +129,30 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
       for await (const delta of readStreamableValue(result.data.stream)) {
         if (!delta) continue // empty string is the first value fed to the stream
 
+        let parsedDelta: {
+          id: string
+          text: string
+          characterDescriptions: string
+          imagePrompt: string
+          imageUrl?: string
+        }
         try {
-          const parsedDelta = JSON.parse(delta || '') as {
-            text: string
-            characterDescriptions: string
-            imagePrompt: string
-            imageUrl: string
-            id: string
-          }
-
-          setState((state) => {
-            // If the new data contains an imageUrl, update the existing node with the imageUrl
-            if (parsedDelta.imageUrl) {
-              const nodeToChange = state.nodes.find(
-                (n) => n.data.text === parsedDelta.text
-              )
-              if (nodeToChange) {
-                nodeToChange.data.imageUrl = parsedDelta.imageUrl
-                nodeToChange.data.imagePrompt = parsedDelta.imagePrompt
-              }
-
-              return {
-                ...state,
-                nodes: [...state.nodes],
-              }
-            } else {
-              // StrictMode invokes setState callbacks twice, so the node we're editing is either empty
-              // or already has this story step.
-              const nodeToChange = newNodes.find(
-                (n) => n.data.text === parsedDelta.text || n.data.text === ''
-              )
-              let edges = state.edges
-              if (nodeToChange) {
-                edges = edges.map((e) => {
-                  if (e.source === nodeToChange.id) {
-                    return { ...e, source: parsedDelta.id }
-                  }
-                  if (e.target === nodeToChange.id) {
-                    return { ...e, target: parsedDelta.id }
-                  }
-                  return e
-                })
-
-                nodeToChange.id = parsedDelta.id
-                nodeToChange.data.text = parsedDelta.text
-                nodeToChange.data.characterDescriptions =
-                  parsedDelta.characterDescriptions
-              }
-
-              return {
-                nodes: [...state.nodes],
-                edges,
-              }
-            }
-          })
+          parsedDelta = JSON.parse(delta || '')
         } catch (e) {
           console.error('Error parsing story continuations', e)
+          continue
         }
+
+        // We're doing all of this inside of a setState to access the current state without directly
+        // depending on it, which would make this imagineStorySteps callback to not be memoizable.
+        setState((state) => buildNextNodes(newNodes, state, parsedDelta))
       }
     } catch (e) {
       console.error('Error generating story continuations', e)
       if ((e as ClientErrors).error === 'rate-limit-exceeded') {
         setErrorCode('rate-limit-exceeded')
+      } else {
+        setErrorCode('something-went-wrong')
       }
     }
   }, [])
@@ -198,6 +161,8 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
     () => getLayoutedElements(nodes, edges),
     [nodes, edges]
   )
+  console.log('layoutedNodes', layoutedNodes)
+  console.log('layoutedEdges', layoutedEdges)
 
   return (
     <>
@@ -224,17 +189,70 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
         style={{ backgroundColor: '#0f172a' }}
       />
       {/* Fun little 3d background experiment */}
-      <div className="fixed inset-0 overflow-hidden perspective-[1000px] z-[-1]">
-        <div
-          className="absolute top-1/2 left-1/2 w-full h-full z-[-1] opacity-30 bg-cover bg-center min-w-[200%] min-h-[200%] preserve-3d"
-          style={{
-            backgroundImage: 'url(/bg2.webp)',
-            animation: 'rotateBackground 80s linear infinite alternate',
-          }}
-        />
-      </div>
+      <RotatingStarryBackground />
     </>
   )
+}
+
+function buildNextNodes(
+  newNodes: StoryCardNode[],
+  state: { nodes: StoryCardNode[]; edges: Edge[] },
+  parsedDelta: {
+    text: string
+    characterDescriptions: string
+    imagePrompt: string
+    imageUrl?: string
+    id: string
+  }
+) {
+  console.log('parsedDelta', parsedDelta)
+  // If the new data contains an imageUrl, update the existing node with the imageUrl
+  if (parsedDelta.imageUrl) {
+    let nodes = state.nodes
+    const nodeToChange = state.nodes.find(
+      (n) => n.data.text === parsedDelta.text
+    )
+    if (nodeToChange && !nodeToChange.data.imageUrl) {
+      nodeToChange.data.imageUrl = parsedDelta.imageUrl
+      nodeToChange.data.imagePrompt = parsedDelta.imagePrompt
+      nodes = [...state.nodes]
+    }
+
+    return {
+      nodes,
+      edges: state.edges,
+    }
+  }
+
+  // StrictMode invokes setState callbacks twice, so we may be editing an existing node
+  const nodeExists = state.nodes.find((n) => n.data.id === parsedDelta.id)
+  if (nodeExists) return state
+
+  // Otherwise, we're creating a new node
+  const emptyNode = newNodes.find((n) => n.data.text === '')
+  let edges = state.edges
+  if (emptyNode) {
+    console.log('emptyNode', JSON.parse(JSON.stringify(emptyNode)), parsedDelta)
+    // Because we're changing ids, we need to update all edges that point to the old id
+    edges = edges.map((e) => {
+      if (e.source === emptyNode.id) {
+        return { ...e, source: parsedDelta.id }
+      }
+      if (e.target === emptyNode.id) {
+        return { ...e, target: parsedDelta.id }
+      }
+      return e
+    })
+
+    emptyNode.id = parsedDelta.id
+    emptyNode.data.text = parsedDelta.text
+    emptyNode.data.characterDescriptions = parsedDelta.characterDescriptions
+  }
+
+  return {
+    nodes: [...state.nodes],
+    edges,
+  }
 }
 
 /**

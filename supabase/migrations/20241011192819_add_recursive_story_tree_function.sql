@@ -3,7 +3,6 @@
 -- Drop the function if it already exists to avoid conflicts
 DROP FUNCTION IF EXISTS public.get_story_subtree(VARCHAR(6));
 
--- Create the function
 CREATE FUNCTION public.get_story_subtree(start_node_id VARCHAR(6))
 RETURNS SETOF public.story_node AS
 $BODY$

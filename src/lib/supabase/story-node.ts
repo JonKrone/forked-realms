@@ -7,9 +7,10 @@ import {
   TablesUpdate,
 } from '../../../supabase/supabase.types'
 
+export type StoryNodeCreateParams = Omit<TablesInsert<'story_node'>, 'user_id'>
+
 export const StoryNode = {
-  create: async (params: Omit<TablesInsert<'story_node'>, 'user_id'>) => {
-    console.log('create params', params)
+  create: async (params: StoryNodeCreateParams) => {
     const supabase = createClient()
 
     const user = await User.get()
@@ -24,7 +25,6 @@ export const StoryNode = {
     return camelizeKeys(data)
   },
   update: async (params: TablesUpdate<'story_node'>) => {
-    console.log('update params', params)
     const supabase = createClient()
 
     const { data, error } = await supabase
@@ -55,7 +55,8 @@ export const StoryNode = {
   getStoryTree: async (rootId: string) => {
     const supabase = createClient()
 
-    // Get all nodes. Obviously not efficient for large trees, but we're okay with it.
+    // A recursive SQL query to get all of the nodes from a root node.
+    // See supabase/migrations/20241011192819_add_recursive_story_tree_function.sql
     const { data, error } = await supabase.rpc('get_story_subtree', {
       start_node_id: rootId,
     })

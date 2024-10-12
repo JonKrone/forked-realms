@@ -29,6 +29,7 @@ export const KnownErrorDialog: FC<{ code: string; onClose: () => void }> = ({
         small experiment.
       </>
     ),
+    'something-went-wrong': fallbackError,
   }[code]
 
   return (

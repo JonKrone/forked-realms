@@ -28,12 +28,16 @@ const handleStyle = {
 export const StoryCard = ({ data }: NodeProps<StoryCardNode>) => {
   const { root, leaf, text, imagePrompt, imageUrl } = data
 
+  // Once an image has been generated, make the card clickable
+  const clickable = !!imageUrl
   return (
     <Card
       className={cn(
         'bg-transparent border-none shadow-xl shadow-slate-700 overflow-hidden transition-colors duration-200',
         leaf &&
-          'border-2 border-dashed border-gray-500 hover:bg-slate-600 hover:bg-opacity-80 hover:border-gray-500 hover:cursor-pointer active:bg-slate-500 hover:shadow-[0_0_15px_rgba(100,149,237,0.5)] transition-all duration-300'
+          'border-2 border-dashed border-gray-500  transition-all duration-300',
+        clickable &&
+          'hover:bg-slate-600 hover:bg-opacity-80 hover:border-gray-500 hover:cursor-pointer active:bg-slate-500 hover:shadow-[0_0_15px_rgba(100,149,237,0.5)]'
       )}
       style={{ width: '32rem' }}
     >
