@@ -4,8 +4,8 @@ import Image from 'next/image'
 import { FC, useState } from 'react'
 
 interface SmartImageProps {
-  imageUrl?: string
-  imagePrompt?: string
+  imageUrl: string | null
+  imagePrompt: string | null
   label: string
 }
 

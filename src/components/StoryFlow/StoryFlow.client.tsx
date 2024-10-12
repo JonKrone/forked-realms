@@ -20,40 +20,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getLayoutedElements } from '../../lib/node-flow-layout'
 import { StoryCard, StoryCardData, StoryCardNode } from './StoryCard'
 
-const StartingStories = [
-  "In a world where shadows have their own secrets, you find a key that doesn't fit any lock you've ever seen.",
-  'Just as the clock strikes midnight, the stars begin to fall from the sky one by one.',
-  "You receive a mysterious message that simply says, 'Meet me where the sun kisses the ocean at dawn.'",
-  'The old radio crackles to life, broadcasting a station that vanished decades ago.',
-  'A single door appears in the middle of the forest, pulsing with a faint glow.',
-  "Every painting you touch comes alive, and they're all trying to tell you something urgent.",
-  "You wake up to discover that gravity has reversed, and you're floating toward the sky.",
-  /** a fun one **/ 'An ancient tree in the park starts whispering your name whenever you walk by.',
-  'A stray cat crosses your path, but when you look into its eyes, you see entire galaxies swirling within.',
-  "Time freezes except for you and a stranger who says, 'I've been looking for you across lifetimes.'",
-]
-
 const NodeTypes = {
   storyCard: StoryCard,
 }
 
-export function StoryFlow({ rootId }: { rootId: string }) {
+interface StoryFlowProps {
+  initialNodes: StoryCardNode[]
+  initialEdges: Edge[]
+}
+
+export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [{ nodes, edges }, setState] = useState<{
     nodes: StoryCardNode[]
     edges: Edge[]
   }>({
-    nodes: [
-      createNode({
-        text: StartingStories[
-          Math.floor(Math.random() * StartingStories.length)
-        ],
-        root: true,
-        leaf: true, // initially, the root is also a leaf
-        characterDescriptions: '',
-      }),
-    ],
-    edges: [],
+    nodes: initialNodes,
+    edges: initialEdges,
   })
 
   // initial generations
@@ -64,13 +47,16 @@ export function StoryFlow({ rootId }: { rootId: string }) {
       const image = await generateImage({ prompt: imagePrompt })
       if (!image) return
 
-      rootNode.data.imageUrl = image.data?.imageUrl
+      rootNode.data.imageUrl = image.data?.imageUrl || null
       rootNode.data.imagePrompt = imagePrompt
       setState((state) => ({ ...state, nodes: [...state.nodes] }))
     }
 
     generateImageForRoot()
-    imagineStorySteps(nodes)
+    // only generate new story steps if we the root node does not have any children
+    if (nodes.every((n) => n.data.root)) {
+      imagineStorySteps(nodes)
+    }
   }, [])
 
   const handleNewNodeSubmit: NodeMouseHandler<StoryCardNode> = async (
@@ -131,7 +117,10 @@ export function StoryFlow({ rootId }: { rootId: string }) {
     })
 
     // begin generating continuations
-    const result = await generateContinuations(steps.map((s) => s.data))
+    const result = await generateContinuations({
+      parentId: leafNode.id,
+      storyNodes: steps.map((s) => s.data),
+    })
     if (!result?.data) return
 
     // listen for streamed continuations and images
@@ -210,8 +199,6 @@ export function StoryFlow({ rootId }: { rootId: string }) {
     [nodes, edges]
   )
 
-  console.log('layoutedNodes', layoutedNodes)
-  console.log('layoutedEdges', layoutedEdges)
   return (
     <>
       {errorCode && (
@@ -220,7 +207,6 @@ export function StoryFlow({ rootId }: { rootId: string }) {
       <ReactFlow
         nodes={layoutedNodes as StoryCardNode[]}
         edges={layoutedEdges}
-        // fitView
         proOptions={{ hideAttribution: true }}
         nodeTypes={NodeTypes}
         onNodeClick={handleNewNodeSubmit}
@@ -289,7 +275,7 @@ function getStorySteps(nodes: StoryCardNode[]) {
 }
 
 /** Simple helper to create a new story card node */
-function createNode({
+export function createNode({
   id,
   text,
   root,
@@ -297,17 +283,17 @@ function createNode({
   characterDescriptions,
   imageUrl,
   imagePrompt,
-}: StoryCardData): StoryCardNode {
+}: Partial<StoryCardData>): StoryCardNode {
   return {
     id: id || `temp-${generateId(6)}`,
     type: 'storyCard',
     data: {
-      text,
-      root,
-      leaf,
-      characterDescriptions,
-      imageUrl,
-      imagePrompt,
+      text: text || '',
+      root: root || false,
+      leaf: leaf || false,
+      characterDescriptions: characterDescriptions || '',
+      imageUrl: imageUrl || null,
+      imagePrompt: imagePrompt || null,
     },
     position: { x: 0, y: 0 },
   }

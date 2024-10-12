@@ -13,21 +13,37 @@ export type ClientErrors =
   | { error: 'rate-limit-exceeded' }
   | { error: 'something-went-wrong' }
 
+export const ensureRootNode = actionClient
+  .schema(z.object({ nodeId: z.string(), text: z.string() }))
+  .action(async ({ parsedInput: { nodeId, text } }) => {
+    let node = await StoryNode.get(nodeId)
+    if (!node) {
+      node = await StoryNode.create({
+        id: nodeId || generateId(6),
+        text,
+      })
+    }
+    return { node }
+  })
+
 export const generateContinuations = actionClient
   .schema(
-    z.array(
-      z.object({
-        id: z.string().optional(),
-        text: z.string(),
-        root: z.boolean(),
-        leaf: z.boolean(),
-        characterDescriptions: z.string(),
-        imageUrl: z.string().optional(),
-        imagePrompt: z.string().optional(),
-      })
-    )
+    z.object({
+      parentId: z.string().optional(),
+      storyNodes: z.array(
+        z.object({
+          id: z.string().optional(),
+          text: z.string(),
+          root: z.boolean(),
+          leaf: z.boolean(),
+          characterDescriptions: z.string().optional(),
+          imageUrl: z.string().nullable().optional(),
+          imagePrompt: z.string().nullable().optional(),
+        })
+      ),
+    })
   )
-  .action(async ({ parsedInput: storyNodes }) => {
+  .action(async ({ parsedInput: { parentId, storyNodes } }) => {
     const storySteps = storyNodes
       .map((node) => `<story-step>${node.text}</story-step>`)
       .join('\n')
@@ -50,23 +66,33 @@ export const generateContinuations = actionClient
         for await (const partOfTheStory of result.elementStream) {
           if (streamErrored) return
 
-          const newNode = await StoryNode.create({
+          const nodeParams = {
             id: generateId(6),
+            parent_id: parentId,
             text: partOfTheStory.nextPartOfTheStory,
             character_descriptions: partOfTheStory.characterDescriptions,
             image_prompt: partOfTheStory.imagePrompt,
-          })
-          stream.update(JSON.stringify(newNode))
+          }
+          // Don't await this, we want to stream the node as soon as possible
+          StoryNode.create(nodeParams)
+
+          stream.update(JSON.stringify(nodeParams))
 
           imagesRequested += 1
           ;(async () => {
             try {
               const imageUrl = await _generateImage(partOfTheStory.imagePrompt)
-              const nodeWithImage = await StoryNode.update({
-                id: newNode.id,
+              // Don't await this, we want to stream the node as soon as possible
+              StoryNode.update({
+                id: nodeParams.id,
                 image_url: imageUrl,
               })
-              stream.update(JSON.stringify(nodeWithImage))
+              stream.update(
+                JSON.stringify({
+                  ...nodeParams,
+                  image_url: imageUrl,
+                })
+              )
 
               imagesGenerated += 1
               if (
@@ -209,6 +235,7 @@ export const generateImage = actionClient
     return { imageUrl }
   })
 
+// TODO: Consider supporting a `storyNodeId` and implicitly saving the imageUrl to the node
 async function _generateImage(prompt: string) {
   const [imageUrl] = (await replicate.run(imageModels.blackForestLabs.schnell, {
     input: {

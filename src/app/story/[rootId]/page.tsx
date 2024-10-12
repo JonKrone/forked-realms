@@ -1,4 +1,4 @@
-import { StoryFlow } from '@/components/StoryFlow/StoryFlow.client'
+import StoryFlowRoot from '@/components/StoryFlow/StoryFlowRoot'
 import { ReactFlowProvider } from '@xyflow/react'
 
 export default function Story({ params }: { params: { rootId: string } }) {
@@ -7,7 +7,7 @@ export default function Story({ params }: { params: { rootId: string } }) {
   return (
     <div className="w-screen h-screen">
       <ReactFlowProvider>
-        <StoryFlow rootId={rootId} />
+        <StoryFlowRoot rootId={rootId} />
       </ReactFlowProvider>
     </div>
   )

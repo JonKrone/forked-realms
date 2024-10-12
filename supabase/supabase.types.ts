@@ -16,6 +16,7 @@ export type Database = {
           id: string
           image_prompt: string | null
           image_url: string | null
+          parent_id: string | null
           text: string
           user_id: string
         }
@@ -25,6 +26,7 @@ export type Database = {
           id?: string
           image_prompt?: string | null
           image_url?: string | null
+          parent_id?: string | null
           text: string
           user_id: string
         }
@@ -34,10 +36,18 @@ export type Database = {
           id?: string
           image_prompt?: string | null
           image_url?: string | null
+          parent_id?: string | null
           text?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_story_node_parent"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "story_node"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "story_node_user_id_fkey"
             columns: ["user_id"]
@@ -52,7 +62,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_short_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_story_subtree: {
+        Args: {
+          start_node_id: string
+        }
+        Returns: {
+          character_descriptions: string | null
+          created_at: string | null
+          id: string
+          image_prompt: string | null
+          image_url: string | null
+          parent_id: string | null
+          text: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

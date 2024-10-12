@@ -14,8 +14,8 @@ export type StoryCardData = {
   root: boolean
   leaf: boolean
   characterDescriptions: string
-  imageUrl?: string
-  imagePrompt?: string
+  imageUrl: string | null
+  imagePrompt: string | null
 }
 
 export type StoryCardNode = Node<StoryCardData>
