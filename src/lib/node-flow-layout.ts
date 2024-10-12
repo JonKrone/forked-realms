@@ -1,6 +1,6 @@
 'use client'
 
-import { StoryCardNode } from '@/components/StoryFlow/StoryCard'
+import { StoryCardNode } from '@/components/StoryFlow/StoryCard.client'
 import { Edge, Node, Position } from '@xyflow/react'
 import dagre from 'dagre'
 

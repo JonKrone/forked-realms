@@ -6,7 +6,7 @@ import { FC } from 'react'
 
 interface UpdateUsernameFormProps
   extends React.HTMLAttributes<HTMLFormElement> {
-  // TODO: next-safe-action request a type like InferStateActionOptions<typeof updateUsername>
+  // TODO: request a type like InferStateActionOptions<typeof updateUsername> from next-safe-action
   actionOptions?: any
 }
 

@@ -1,7 +1,7 @@
 'use server'
 
 import { models } from '@/lib/models'
-import { imageModels, replicate } from '@/lib/replicate'
+import { replicate } from '@/lib/replicate'
 import { actionClient } from '@/lib/safe-action'
 import { StoryNode, StoryNodeCreateParams } from '@/lib/supabase/story-node'
 import { APICallError, generateId, RetryError, streamObject } from 'ai'
@@ -247,7 +247,7 @@ Previous Character Descriptions:
 }
 
 async function _generateImage(prompt: string) {
-  const [imageUrl] = (await replicate.run(imageModels.blackForestLabs.schnell, {
+  const [imageUrl] = (await replicate.run(models.blackForestLabs.schnell, {
     input: {
       prompt,
       aspect_ratio: '1:1', // 3:4, 2:3, 3:4, 9:21

@@ -1,6 +1,6 @@
 'use server'
 
-import { StoryCardNode } from '@/components/StoryFlow/StoryCard'
+import { StoryCardNode } from '@/components/StoryFlow/StoryCard.client'
 import {
   NodesAndEdges,
   StoryFlow,

@@ -6,7 +6,7 @@ import {
   generateContinuations,
   generateImage,
 } from '@/app/actions/stories'
-import { KnownErrorDialog } from '@/components/StoryFlow/KnownErrorDialog'
+import { KnownErrorDialog } from '@/components/KnownErrorDialog'
 import { RotatingStarryBackground } from '@/components/StoryFlow/RotatingStarryBackground'
 import {
   Background,
@@ -20,7 +20,7 @@ import { generateId } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 import { useEffect, useState } from 'react'
 import { getLayoutedElements } from '../../lib/node-flow-layout'
-import { StoryCard, StoryCardData, StoryCardNode } from './StoryCard'
+import { StoryCard, StoryCardData, StoryCardNode } from './StoryCard.client'
 
 const NodeTypes = {
   storyCard: StoryCard,
@@ -45,6 +45,7 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
 
   // initial generations
   useEffect(() => {
+    // TODO: Figure out how to avoid re-generating the image for the root node
     const generateImageForRoot = async () => {
       const rootNode = nodes[0]
       const imagePrompt = `Create a scene inspired by the beginning line of this story: '${rootNode.data.text}'. The image should capture a sense of intrigue and wonder, with hints of the unknown. The lighting should be dramatic and subtle highlights suggest hidden elements in the background. The environment can feel surreal or slightly otherworldly, with textures and objects that invite curiosity.`
