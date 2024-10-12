@@ -1,7 +1,10 @@
 'use server'
 
 import { StoryCardNode } from '@/components/StoryFlow/StoryCard'
-import { StoryFlow } from '@/components/StoryFlow/StoryFlow.client'
+import {
+  NodesAndEdges,
+  StoryFlow,
+} from '@/components/StoryFlow/StoryFlow.client'
 import { StoryNode } from '@/lib/supabase/story-node'
 import { Edge } from '@xyflow/react'
 
@@ -27,14 +30,9 @@ export default async function StoryFlowRoot({ rootId }: { rootId: string }) {
   return <StoryFlow initialNodes={nodes} initialEdges={edges} />
 }
 
-interface NodesAndEdges {
-  nodes: StoryCardNode[]
-  edges: Edge[]
-}
-
 type StoryNode = Awaited<ReturnType<typeof StoryNode.getStoryTree>>[number]
 
-const nodesAndEdgesFromStoryNodes = (storyNodes: StoryNode[]) => {
+function nodesAndEdgesFromStoryNodes(storyNodes: StoryNode[]): NodesAndEdges {
   const parentNodes = new Set<string>(
     storyNodes.filter((node) => node.parentId).map((node) => node.parentId!)
   )

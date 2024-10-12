@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  ClientDelta,
   ClientErrors,
   generateContinuations,
   generateImage,
@@ -17,12 +18,17 @@ import {
 import '@xyflow/react/dist/style.css'
 import { generateId } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getLayoutedElements } from '../../lib/node-flow-layout'
 import { StoryCard, StoryCardData, StoryCardNode } from './StoryCard'
 
 const NodeTypes = {
   storyCard: StoryCard,
+}
+
+export interface NodesAndEdges {
+  nodes: StoryCardNode[]
+  edges: Edge[]
 }
 
 interface StoryFlowProps {
@@ -32,10 +38,7 @@ interface StoryFlowProps {
 
 export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
   const [errorCode, setErrorCode] = useState<string | null>(null)
-  const [{ nodes, edges }, setState] = useState<{
-    nodes: StoryCardNode[]
-    edges: Edge[]
-  }>({
+  const [{ nodes, edges }, setState] = useState<NodesAndEdges>({
     nodes: initialNodes,
     edges: initialEdges,
   })
@@ -55,7 +58,7 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
 
     generateImageForRoot()
     // only generate new story steps if we the root node does not have any children
-    if (nodes.every((n) => n.data.root)) {
+    if (initialNodes.every((n) => n.data.root)) {
       imagineStorySteps(nodes)
     }
   }, [])
@@ -67,46 +70,34 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
     if (!node.data.leaf) return
 
     // generate next story steps for the user to select from
-    imagineStorySteps(
-      getPathToRoot(layoutedNodes, layoutedEdges, node.id) as StoryCardNode[]
-    )
+    imagineStorySteps(getPathToRoot(nodes, edges, node.id) as StoryCardNode[])
   }
 
-  const imagineStorySteps = useCallback(async (steps: StoryCardNode[]) => {
+  // Spooky to not memoize this, but React Compiler should do it for us
+  const imagineStorySteps = async (steps: StoryCardNode[]) => {
     const leafNode = steps.find((n) => n.data.leaf)
     if (!leafNode) {
       throw new Error('No leaf node found') // shouldn't happen
     }
 
-    // mark the leaf node as a part of a story.
-    // and generate 3 new template nodes for the story
-    const newNodes = [
+    // Generate 3 new skeleton nodes for the story
+    const newNodes = Array.from({ length: 3 }, () =>
       createNode({
         text: '',
         root: false,
         leaf: true,
         characterDescriptions: '',
-      }),
-      createNode({
-        text: '',
-        root: false,
-        leaf: true,
-        characterDescriptions: '',
-      }),
-      createNode({
-        text: '',
-        root: false,
-        leaf: true,
-        characterDescriptions: '',
-      }),
-    ]
+      })
+    )
     const newEdges = newNodes.map((n, i) => ({
       id: `${leafNode.id}-${n.id}`,
       source: leafNode.id,
       target: n.id,
     }))
 
+    // Update the state with these skeletons while we generate the continuations
     setState((state) => {
+      // Update the clicked node to no longer be a leaf
       const thisLeaf = state.nodes.find((n) => n.id === leafNode.id)
       if (!thisLeaf) return state
       thisLeaf.data.leaf = false
@@ -117,25 +108,18 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
       }
     })
 
-    // begin generating continuations
+    // Begin generating continuations
     const result = await generateContinuations({
       parentId: leafNode.id,
       storyNodes: steps.map((s) => s.data),
     })
     if (!result?.data) return
 
-    // listen for streamed continuations and images
     try {
       for await (const delta of readStreamableValue(result.data.stream)) {
         if (!delta) continue // empty string is the first value fed to the stream
 
-        let parsedDelta: {
-          id: string
-          text: string
-          characterDescriptions: string
-          imagePrompt: string
-          imageUrl?: string
-        }
+        let parsedDelta: ClientDelta
         try {
           parsedDelta = JSON.parse(delta || '')
         } catch (e) {
@@ -149,20 +133,20 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
       }
     } catch (e) {
       console.error('Error generating story continuations', e)
-      if ((e as ClientErrors).error === 'rate-limit-exceeded') {
+      const error = (e as ClientErrors).error
+      if (error === 'rate-limit-exceeded') {
         setErrorCode('rate-limit-exceeded')
       } else {
         setErrorCode('something-went-wrong')
       }
     }
-  }, [])
+  }
 
-  const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
-    () => getLayoutedElements(nodes, edges),
-    [nodes, edges]
+  // Spooky to not memoize this, but React Compiler should do it for us
+  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+    nodes,
+    edges
   )
-  console.log('layoutedNodes', layoutedNodes)
-  console.log('layoutedEdges', layoutedEdges)
 
   return (
     <>
@@ -197,61 +181,49 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
 function buildNextNodes(
   newNodes: StoryCardNode[],
   state: { nodes: StoryCardNode[]; edges: Edge[] },
-  parsedDelta: {
-    text: string
-    characterDescriptions: string
-    imagePrompt: string
-    imageUrl?: string
-    id: string
-  }
+  delta: ClientDelta
 ) {
-  console.log('parsedDelta', parsedDelta)
-  // If the new data contains an imageUrl, update the existing node with the imageUrl
-  if (parsedDelta.imageUrl) {
-    let nodes = state.nodes
-    const nodeToChange = state.nodes.find(
-      (n) => n.data.text === parsedDelta.text
-    )
+  // update an existing node with its new imageUrl
+  if (delta.type === 'image-generated') {
+    const { id, imageUrl, imagePrompt } = delta.payload
+
+    const nodeToChange = state.nodes.find((n) => n.id === id)
     if (nodeToChange && !nodeToChange.data.imageUrl) {
-      nodeToChange.data.imageUrl = parsedDelta.imageUrl
-      nodeToChange.data.imagePrompt = parsedDelta.imagePrompt
-      nodes = [...state.nodes]
+      nodeToChange.data.imageUrl = imageUrl
+      nodeToChange.data.imagePrompt = imagePrompt
     }
 
     return {
-      nodes,
+      nodes: state.nodes,
       edges: state.edges,
     }
   }
 
+  const { id, text, characterDescriptions } = delta.payload
+
   // StrictMode invokes setState callbacks twice, so we may be editing an existing node
-  const nodeExists = state.nodes.find((n) => n.data.id === parsedDelta.id)
+  const nodeExists = state.nodes.find((n) => n.data.text === text)
   if (nodeExists) return state
 
   // Otherwise, we're creating a new node
-  const emptyNode = newNodes.find((n) => n.data.text === '')
-  let edges = state.edges
-  if (emptyNode) {
-    console.log('emptyNode', JSON.parse(JSON.stringify(emptyNode)), parsedDelta)
+  const nextNewNode = newNodes.find((n) => n.data.text === '')
+  if (nextNewNode) {
     // Because we're changing ids, we need to update all edges that point to the old id
-    edges = edges.map((e) => {
-      if (e.source === emptyNode.id) {
-        return { ...e, source: parsedDelta.id }
-      }
-      if (e.target === emptyNode.id) {
-        return { ...e, target: parsedDelta.id }
+    state.edges = state.edges.map((e) => {
+      if (e.target === nextNewNode.id) {
+        return { ...e, target: id }
       }
       return e
     })
 
-    emptyNode.id = parsedDelta.id
-    emptyNode.data.text = parsedDelta.text
-    emptyNode.data.characterDescriptions = parsedDelta.characterDescriptions
+    nextNewNode.id = id
+    nextNewNode.data.text = text
+    nextNewNode.data.characterDescriptions = characterDescriptions
   }
 
   return {
-    nodes: [...state.nodes],
-    edges,
+    nodes: state.nodes,
+    edges: state.edges,
   }
 }
 
@@ -283,13 +255,6 @@ function getPathToRoot(nodes: Node[], edges: Edge[], nodeId: string): Node[] {
   }
 
   return getPath(nodeId).reverse()
-}
-
-/**
- * Returns a string of all the story steps in the order they appear in the story
- */
-function getStorySteps(nodes: StoryCardNode[]) {
-  return nodes.map((n) => `<story-step>${n.data.text}</story-step>`).join('\n')
 }
 
 /** Simple helper to create a new story card node */

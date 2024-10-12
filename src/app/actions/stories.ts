@@ -4,11 +4,20 @@ import { models } from '@/lib/models'
 import { imageModels, replicate } from '@/lib/replicate'
 import { actionClient } from '@/lib/safe-action'
 import { StoryNode, StoryNodeCreateParams } from '@/lib/supabase/story-node'
-import { camelizeKeys } from '@/lib/utils'
 import { APICallError, generateId, RetryError, streamObject } from 'ai'
 import { createStreamableValue } from 'ai/rsc'
 import { ApiError as ReplicateApiError } from 'replicate'
 import { z } from 'zod'
+
+export type ClientDelta =
+  | {
+      type: 'new-node'
+      payload: { id: string; text: string; characterDescriptions: string }
+    }
+  | {
+      type: 'image-generated'
+      payload: { id: string; imageUrl: string; imagePrompt: string }
+    }
 
 export type ClientErrors =
   | { error: 'rate-limit-exceeded' }
@@ -87,7 +96,16 @@ async function generateStoryContinuations(
       }
 
       // Tell the client about the new node
-      stream.update(JSON.stringify(camelizeKeys(nodeParams)))
+      stream.update(
+        JSON.stringify({
+          type: 'new-node',
+          payload: {
+            id: nodeParams.id,
+            text: nodeParams.text,
+            characterDescriptions: nodeParams.character_descriptions,
+          },
+        })
+      )
 
       // Create the node but don't await it, we want to stream the node as soon as possible
       StoryNode.create(nodeParams).catch((error) => {
@@ -129,7 +147,16 @@ async function generateImageForNode(
   const imageUrl = await _generateImage(nodeParams.image_prompt!)
 
   // Tell the client about the new image URL
-  stream.update(JSON.stringify(camelizeKeys({ ...nodeParams, imageUrl })))
+  stream.update(
+    JSON.stringify({
+      type: 'image-generated',
+      payload: {
+        id: nodeParams.id,
+        imageUrl,
+        imagePrompt: nodeParams.image_prompt,
+      },
+    })
+  )
 
   // Update the story node with the image URL
   StoryNode.update({ id: nodeParams.id, image_url: imageUrl })
