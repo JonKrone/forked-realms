@@ -68,7 +68,7 @@ export function StoryFlow({ initialNodes, initialEdges }: StoryFlowProps) {
     _evt,
     node
   ) => {
-    if (!node.data.leaf) return
+    if (!node.data.leaf || !node.data.text) return
 
     // generate next story steps for the user to select from
     imagineStorySteps(getPathToRoot(nodes, edges, node.id) as StoryCardNode[])

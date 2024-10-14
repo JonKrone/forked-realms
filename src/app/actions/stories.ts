@@ -95,7 +95,7 @@ async function generateStoryContinuations(
         image_prompt: continuation.imagePrompt,
       }
 
-      console.log('Continuation:', nodeParams.id)
+      console.log('New Continuation:', nodeParams.id)
 
       // Tell the client about the new node
       stream.update(

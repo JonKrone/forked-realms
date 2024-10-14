@@ -11,6 +11,12 @@ export const models = {
     })('gpt-4o-2024-08-06', {
       structuredOutputs: true,
     }),
+    gpt4oMini: createOpenAI({
+      compatibility: 'strict',
+      apiKey: process.env.OPENAI_API_KEY,
+    })('gpt-4o-mini-2024-07-18', {
+      structuredOutputs: true,
+    }),
   },
   anthropic: {
     claude35Sonnet: createAnthropic({
