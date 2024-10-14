@@ -1,36 +1,22 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Forked Realms
 
-## Getting Started
+Forked Realms is an experimental text-and-image adventure project designed to explore cutting-edge frontend technologies and AI integrations.
 
-First, run the development server:
+## Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This application allows users to build a story one step at a time, leveraging modern web development tools and AI-generated content.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The use of generative AI here is fairly straightforward. One new-to-me technique here was the combination of server streaming and multiplexing. When you click a story node to add it to your story, we initiate one request which passes back a stream that the client can listen to for updates. The server the kicks off multiple generations in parallel which have different latencies and then multiplexes the results back to the client. This is a light-weight version of what servers have been doing for a long time with WebSockets, which I am very excited to explore further in future projects.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Technologies
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **React Server Components**: Utilizes React 19 and Next.js App Router for server-side rendering.
+- **Streaming Generative AI**: Streams AI-generated text and images, multiplexing content .
+- **React Experimental Compiler**: Implements React's experimental compiler for performance optimization.
+- **AI Models**: Integrates GPT-4o for story generation and Black Forest Labs' FLUX for image generation.
+- **Vercel AI SDK**: Facilitates AI model integration.
+- **Supabase**: Handles user authentication and the StoryNodes database.
+- **UI Components**: Uses Shadcn/UI and Radix UI for building the interface.
+- **React Flow**: Incorporates a node-based graph editor for story visualization.
+- **Tailwind CSS**: Applies utility-first CSS for styling.
+- **Hosting**: Deployed on Vercel.

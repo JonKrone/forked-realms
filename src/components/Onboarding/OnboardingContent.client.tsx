@@ -80,7 +80,8 @@ export function OnboardingContent() {
               <CollapsibleContent className="CollapsibleContent p-2 text-sm bg-white">
                 <ul className="space-y-1 list-disc list-inside">
                   <li>
-                    Uses <strong>Supabase</strong> for authentication.
+                    Uses <strong>Supabase</strong> for authentication and the
+                    StoryNodes database.
                   </li>
                   <li>
                     Uses <strong>Shadcn/UI</strong> and{' '}
