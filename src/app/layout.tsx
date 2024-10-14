@@ -19,7 +19,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: 'Forked Realms',
   description:
-    'Create and explore an evolving story with AI-generated options and user contributions.',
+    'Create and explore an evolving story with AI-generated options.',
 }
 
 export default function RootLayout({

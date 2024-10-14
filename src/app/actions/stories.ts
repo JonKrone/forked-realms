@@ -1,6 +1,6 @@
 'use server'
 
-import { models } from '@/lib/models'
+import { models } from '@/lib/ai-models'
 import { replicate } from '@/lib/replicate'
 import { actionClient } from '@/lib/safe-action'
 import { StoryNode, StoryNodeCreateParams } from '@/lib/supabase/story-node'
@@ -95,6 +95,8 @@ async function generateStoryContinuations(
         image_prompt: continuation.imagePrompt,
       }
 
+      console.log('Continuation:', nodeParams.id)
+
       // Tell the client about the new node
       stream.update(
         JSON.stringify({
@@ -110,7 +112,7 @@ async function generateStoryContinuations(
       // Create the node but don't await it, we want to stream the node as soon as possible
       StoryNode.create(nodeParams).catch((error) => {
         streamErrored = true
-        console.log('Error creating node', nodeParams.id, error)
+        console.error('Error creating node', nodeParams.id, error)
         handleError(error, stream)
       })
 
@@ -118,7 +120,7 @@ async function generateStoryContinuations(
       const imagePromise = generateImageForNode(nodeParams, stream).catch(
         (error) => {
           streamErrored = true
-          console.log('Error generating image for node', nodeParams.id, error)
+          console.error('Error generating image for node', nodeParams.id, error)
           handleError(error, stream)
         }
       )
@@ -135,7 +137,7 @@ async function generateStoryContinuations(
     }
   } catch (error) {
     streamErrored = true
-    console.log('Error generating continuations', error)
+    console.error('Error generating continuations', error)
     handleError(error, stream)
   }
 }

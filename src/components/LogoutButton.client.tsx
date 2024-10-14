@@ -6,8 +6,7 @@ import { LogOut } from 'lucide-react'
 import { useStateAction } from 'next-safe-action/stateful-hooks'
 
 export function LogoutButton() {
-  // TODO look into this type error
-  // @ts-expect-error TODO
+  // @ts-expect-error TODO look into this type error
   const { execute } = useStateAction(logout)
 
   return (

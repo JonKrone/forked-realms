@@ -2,15 +2,10 @@
 
 import { LogoutButton } from '@/components/LogoutButton.client'
 import { UsernameField } from '@/components/UsernameField.client'
-import { createClient } from '@/lib/supabase/server'
+import { User } from '@/lib/supabase/user'
 
-interface NavbarProps {}
-
-export async function Navbar({}: NavbarProps) {
-  const {
-    data: { user },
-  } = await createClient().auth.getUser()
-
+export async function Navbar() {
+  const user = await User.get()
   const username = user?.user_metadata.username
 
   return (
