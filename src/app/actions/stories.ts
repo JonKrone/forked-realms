@@ -249,6 +249,8 @@ Previous Character Descriptions:
 }
 
 async function _generateImage(prompt: string) {
+  // TODO: Update Replicate and use their new API. Should now be noticeably faster
+  // @see https://replicate.com/changelog/2024-10-09-synchronous-api
   const [imageUrl] = (await replicate.run(models.blackForestLabs.schnell, {
     input: {
       prompt,
